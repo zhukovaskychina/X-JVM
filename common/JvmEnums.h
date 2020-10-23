@@ -1,0 +1,74 @@
+//
+// Created by zhukovasky on 2020/8/5.
+//
+
+#ifndef JAVAP_JVMENUMS_H
+#define JAVAP_JVMENUMS_H
+enum CONSTANT_POOL_ENUM {
+
+    CONSTANT_Class = 7,
+    CONSTANT_FieldRef = 9,
+    CONSTANT_MethodRef = 10,
+    CONSTANT_InterfaceMethodRef = 11,
+    CONSTANT_String = 8,
+    CONSTANT_Integer = 3,
+    CONSTANT_Float = 4,
+    CONSTANT_Long = 5,
+    CONSTANT_Double = 6,
+    CONSTANT_NameAndType = 12,
+    CONSTANT_Utf8 = 1,
+    CONSTANT_MethodHandle = 15,
+    CONSTANT_MethodType = 16,
+    CONSTANT_InvokeDynamic = 18
+};
+
+enum CLASS_ACCESS_FLAGS_ENUM {
+    ACC_PUBLIC = 0x0001,  //声明为public,可以被包外访问
+    ACC_FINAL = 0x0010,   //声明为final,不允许有子类
+    ACC_SUPER = 0x0020,    //当用到invokespecial指令时，需要特殊处理
+    ACC_INTERFACE = 0x0200,
+    ACC_ABSTRACT = 0x0400,
+    ACC_SYNTHETIC = 0x1000,
+    ACC_ANNOTATION = 0x2000,
+    ACC_ENUM = 0x4000
+};
+
+enum FIELD_ACCESS_FLAGS_ENUM {
+
+    FIELD_ACC_PUBLIC = 0x0001,
+    FIELD_ACC_PRIVATE = 0x0002,
+    FIELD_ACC_PROTECTED = 0x0004,
+    FIELD_ACC_STATIC = 0x0008,
+    FIELD_ACC_FINAL = 0x0010,
+    FIELD_ACC_VOLATILE = 0x0040,
+    FIELD_ACC_TRANSIENT = 0x0080,
+    FIELD_ACC_SYNTHETIC = 0x1000,
+    FIELD_ACC_ENUM = 0x4000
+
+};
+
+enum METHOD_ACCESS_FLAGS_ENUM {
+    METHOD_ACC_PUBLIC = 0x0001,
+    METHOD_ACC_PRIVATE = 0x0002,
+    METHOD_ACC_PROTECTED = 0x0004,
+    METHOD_ACC_STATIC = 0x0008,
+    METHOD_ACC_FINAL = 0x0010,
+    METHOD_ACC_SYNCHRONIZED = 0x0020,
+    METHOD_ACC_BRIDGE = 0X0040,
+    METHOD_ACC_VARAGS = 0X0080,
+    METHOD_ACC_NATIVE = 0X0100,
+    METHOD_ACC_ABSTRACT = 0X0400,
+    METHOD_ACC_STRICT = 0X0800,
+    METHOD_ACC_SYNTHETIC = 0X1000
+};
+enum ARRAY_TYPE_ENUM{
+    T_BOOLEAN=4,
+    T_CHAR=5,
+    T_FLOAT=6,
+    T_DOUBLE=7,
+    T_BYTE=8,
+    T_SHORT=9,
+    T_INT=10,
+    T_LONG=11
+};
+#endif //JAVAP_JVMENUMS_H
