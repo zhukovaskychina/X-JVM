@@ -1,5 +1,5 @@
 # X-JVM - C++实现的Java虚拟机
-
+![XJVM Logo](xjvm.png)
 **作者**: zhukovasky  
 **项目名称**: zhukovasky的Java虚拟机  
 **开发语言**: C++14  
