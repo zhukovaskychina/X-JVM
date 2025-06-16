@@ -66,23 +66,92 @@ X-JVM是一个用C++14编写的Java虚拟机实现，目标是能够解析、加
 
 ## 编译和运行
 
-### 依赖项
-- C++14编译器
+### 系统要求
+- Windows 10/11 (推荐) 或 Windows 7+
+- C++14兼容编译器 (Visual Studio 2017+ 或 MinGW)
 - CMake 3.12+
-- Boost库 (system, filesystem, program_options)
-- zlib库
+- Git (用于下载依赖)
 
-### 编译步骤
-```bash
+### 依赖项
+- **Boost库**: system, filesystem, program_options
+- **zlib库**: 用于ZIP/JAR文件处理
+
+### 🚀 快速开始 (Windows)
+
+#### 方法一：使用自动化脚本 (推荐)
+
+1. **安装依赖** (首次使用):
+```cmd
+# 运行依赖安装脚本
+setup-deps.bat
+```
+
+2. **编译项目**:
+```cmd
+# 使用批处理脚本 (简单)
+build.bat
+
+# 或使用PowerShell脚本 (功能更强)
+.\build.ps1
+```
+
+3. **运行程序**:
+```cmd
+# 编译完成后
+.\build\Release\jvm.exe --help
+```
+
+#### 方法二：手动编译
+
+1. **安装依赖**:
+```cmd
+# 安装vcpkg (如果没有)
+git clone https://github.com/Microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+
+# 安装依赖库
+vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows
+vcpkg integrate install
+```
+
+2. **编译项目**:
+```cmd
 mkdir build
 cd build
-cmake ..
-make
+cmake .. -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+cmake --build . --config Release
+```
+
+### 🛠️ 构建选项
+
+#### 批处理脚本选项:
+```cmd
+build.bat                    # Release构建
+build.bat --debug           # Debug构建  
+build.bat --clean           # 清理后构建
+build.bat --help            # 显示帮助
+```
+
+#### PowerShell脚本选项:
+```powershell
+.\build.ps1                                    # Release构建
+.\build.ps1 -BuildType Debug                   # Debug构建
+.\build.ps1 -Clean                             # 清理后构建
+.\build.ps1 -InstallDeps                       # 自动安装依赖
+.\build.ps1 -Generator "MinGW Makefiles"       # 使用MinGW
+.\build.ps1 -Verbose                           # 详细输出
+.\build.ps1 -Help                              # 显示帮助
+```
+
+#### 清理构建文件:
+```cmd
+clean.bat                    # 清理所有构建文件
 ```
 
 ### 运行方式
-```bash
-./jvm --xjre <JRE路径> --classpath <类路径> --javaclass <主类名.class>
+```cmd
+jvm.exe --xjre <JRE路径> --classpath <类路径> --javaclass <主类名.class>
 ```
 
 ### 参数说明
@@ -90,6 +159,23 @@ make
 - `--classpath`: 用户类路径
 - `--javaclass`: 要执行的Java类文件名（必须以.class结尾）
 - `--help`: 显示帮助信息
+
+### 🔧 故障排除
+
+**常见问题:**
+
+1. **CMake找不到Boost库**:
+   - 确保使用了vcpkg工具链: `-DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake`
+   - 或运行 `setup-deps.bat` 自动配置
+
+2. **编译器错误**:
+   - 确保安装了Visual Studio 2017+或MinGW
+   - 检查PATH环境变量
+
+3. **PowerShell执行策略错误**:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
 
 ## 支持的JVM特性
 
@@ -116,10 +202,13 @@ make
 3. **多线程支持**: 内置线程池，支持并发执行
 4. **可扩展架构**: 指令工厂模式，便于添加新指令
 5. **标准兼容**: 严格按照JVM规范实现
+6. **Windows友好**: 提供完整的Windows构建脚本和工具
 
 ## 开发状态
 
 这是一个学习型项目，主要用于理解JVM内部工作原理。目前可以执行简单的Java程序，但还不是一个完整的生产级JVM。
+
+**完成度约45%** - 适合学习JVM内部机制的参考项目
 
 ## 许可证
 
