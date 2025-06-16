@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
 
     try {
-        options_description desc("新哥的java   \n"
+        options_description desc("zhukovasky的java   \n"
                                  "author: zhukovasky\n"
                                  "Usage: jvm [-options]  [args...]\n"
                                  " e.g jvm --help  \n"
