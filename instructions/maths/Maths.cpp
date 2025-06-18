@@ -1,9 +1,10 @@
 //
-// Created by zhukovasky on 2020/8/14.
+// Created by zhukovasky on 2020/8/4.
 //
 
 #include <cmath>
 #include "Maths.h"
+#include "../../utils/PlatformCompat.h"
 namespace Instruction{
     void IRem::execute(Runtime::JavaFrame *javaFrame) {
         int first=javaFrame->getOperandStack()->popInt();
@@ -22,13 +23,13 @@ namespace Instruction{
         float first=javaFrame->getOperandStack()->popFloat();
         float second=javaFrame->getOperandStack()->popFloat();
 
-        javaFrame->getOperandStack()->pushInt(fmodf64(first,second));
+        javaFrame->getOperandStack()->pushFloat(PlatformCompat::safeFmod(first,second));
     }
     void DRem::execute(Runtime::JavaFrame *javaFrame) {
         double first=javaFrame->getOperandStack()->popDouble();
         double second=javaFrame->getOperandStack()->popDouble();
-        int result=fmodf64(first,second);
-        javaFrame->getOperandStack()->pushInt(result);
+        double result=PlatformCompat::safeFmod(first,second);
+        javaFrame->getOperandStack()->pushDouble(result);
     }
 
     void IDiv::execute(Runtime::JavaFrame *javaFrame) {

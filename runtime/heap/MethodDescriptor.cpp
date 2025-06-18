@@ -4,6 +4,7 @@
 
 #include <cstring>
 #include "MethodDescriptor.h"
+#include "../../utils/PlatformCompat.h"
 namespace Runtime{
     namespace Heap{
         const list<std::string> &MethodDescriptor::getParameterType() const {
@@ -167,6 +168,14 @@ namespace Runtime{
             }
 
             return reinterpret_cast<basic_string<char> &&>(res);
+        }
+
+        std::string MethodDescriptor::getParameterTypes() {
+#ifdef _MSC_VER
+            return std::string(this->readSpecifiedCharsInPositions(start,end));
+#else
+            return std::__cxx11::string(this->readSpecifiedCharsInPositions(start,end));
+#endif
         }
     }
 }

@@ -5,7 +5,7 @@
 #ifndef JAVAP_STRINGUTILS_H
 #define JAVAP_STRINGUTILS_H
 
-
+#include "PlatformCompat.h"
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -14,6 +14,7 @@
 #include <codecvt>
 #include <iostream>
 #include <locale>
+
 namespace Utils{
     using namespace std;
     class StringUtils {
@@ -96,17 +97,10 @@ string new_str                //替换子串
             return toLower(str1) == toLower(str2);
         }
 
+        // Use cross-platform split implementation
         static std::vector<std::string> split(const std::string& str, const std::string& delimiter)
         {
-            char* save = nullptr;
-            char* token = strtok_r(const_cast<char*>(str.c_str()), delimiter.c_str(), &save);
-            std::vector<std::string> result;
-            while (token != nullptr)
-            {
-                result.emplace_back(token);
-                token = strtok_r(nullptr, delimiter.c_str(), &save);
-            }
-            return result;
+            return PlatformCompat::split(str, delimiter);
         }
 
 

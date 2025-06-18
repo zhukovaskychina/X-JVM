@@ -1,8 +1,9 @@
 //
-// Created by zhukovasky on 2020/4/22.
+// Created by zhukovasky on 2020/8/4.
 //
 
 #include "ClassFile.h"
+#include "../utils/PlatformCompat.h"
 #include "../common/JvmEnums.h"
 #include <cstring>
 #include "Constant_Class.h"
@@ -262,7 +263,8 @@ namespace ClassFile{
         //解析interfaces
 
         auto interfaceCount = this->byteQueue->popU2();
-        u2* interfaces[interfaceCount];
+        // 使用vector替代变长数组，因为MSVC不支持VLA
+        std::vector<u2*> interfaces(interfaceCount);
         for (int m = 0; m < interfaceCount; ++m) {
             auto interfaceIndex=this->byteQueue->popU2();
             auto constantClass=this->constantPoolsList->getIndex(interfaceIndex);
@@ -636,11 +638,19 @@ namespace ClassFile{
                 BootstrapMethod *bootstrapMethodIter=new BootstrapMethod;
                 bootstrapMethodIter->setBootstrapMethodRef(byteQueue->popU2());
                 u2 numbootstrapArguments=byteQueue->popU2();
-                u2* bootstrapArgutments[numbootstrapArguments];
+                VLA_DECLARE_PTR_ARRAY(u2, bootstrapArgutments, numbootstrapArguments);
                 for (int j = 0; j < numbootstrapArguments; ++j) {
+#ifdef _MSC_VER
+                    bootstrapArgutments[j] = new u2(byteQueue->popU2());
+#else
                     bootstrapArgutments[j]= reinterpret_cast<u2 *>(byteQueue->popU2());
+#endif
                 }
+#ifdef _MSC_VER
+                bootstrapMethodIter->setBootstrapMethodArguments(*bootstrapArgutments[0]);
+#else
                 bootstrapMethodIter->setBootstrapMethodArguments(*bootstrapArgutments);
+#endif
                 bootstrapMethodList.push_back(bootstrapMethodIter);
             }
             bootstrapMethodAttribute->setNumBootstrapMethods(numBootstrapMethods);
@@ -1011,13 +1021,16 @@ namespace ClassFile{
     }
 
     std::string ClassFile::getUTF8(u2 index) {
-       // ConstantPools &constantPools=this->constantPools[index];
-        Constant_Utf8Info *constantUtf8Info= reinterpret_cast<Constant_Utf8Info*>(this->constantPoolsList->getIndex(index));
-
-        std::string result=constantUtf8Info->toString();
-    //    delete(constantUtf8Info);
-        //delete(&constantPools);
-        return result;
+        auto constantPools=this->constantPoolsList->getIndex(index);
+        auto utf8=reinterpret_cast<Constant_Utf8Info*>(&constantPools);
+        auto  bytes=utf8->getBytes();
+        auto length=utf8->getLength();
+#ifdef _MSC_VER
+        std::string str(reinterpret_cast<const char*>(bytes), length);
+#else
+        std::__cxx11::string str(reinterpret_cast<const char*>(bytes), length);
+#endif
+        return str;
     }
 
     std::string ClassFile::getMethodName(u2 index) {

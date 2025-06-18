@@ -17,6 +17,8 @@
 #include "../../classfile/attributeInfo/Code_attribute.h"
 #include "../../utils/StringUtils.h"
 #include "../HeapConstantUtils.h"
+#include <memory>
+#include "../../utils/PlatformCompat.h"
 
 namespace Runtime{
     JavaClass::JavaClass(ClassFile::ClassFile *classFile) : classFile(classFile) {
@@ -542,6 +544,21 @@ namespace Runtime{
         return nullptr;
     }
 
+    std::string JavaClass::getString() {
+#ifdef _MSC_VER
+        return std::string(result);
+#else
+        return std::__cxx11::string(result);
+#endif
+    }
+
+    std::string JavaClass::getConstantPoolString(u2 index) {
+#ifdef _MSC_VER
+        return std::string();
+#else
+        return std::__cxx11::string();
+#endif
+    }
 
 }
 

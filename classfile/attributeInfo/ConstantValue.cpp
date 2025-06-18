@@ -3,6 +3,7 @@
 //
 
 #include "ConstantValue.h"
+#include "../../utils/PlatformCompat.h"
 
 
 namespace ClassFile{
@@ -39,8 +40,12 @@ namespace ClassFile{
         return AttributesInfo::getAttributeLength();
     }
 
-    const std::string ConstantValue::getTags() const {
+    std::string ConstantValue::toString() {
+#ifdef _MSC_VER
+        return std::string(AttributesInfo::getTags());
+#else
         return std::__cxx11::string(AttributesInfo::getTags());
+#endif
     }
 
     void ConstantValue::setTags(std::string tags) {

@@ -52,6 +52,27 @@ $ProjectRoot = Get-Location
 
 Write-Host "[INFO] Build type: $BuildType" -ForegroundColor Blue
 
+# 检查vcpkg工具链
+function Find-VcpkgToolchain {
+    $vcpkgPaths = @(
+        "C:\vcpkg\scripts\buildsystems\vcpkg.cmake",
+        "C:\tools\vcpkg\scripts\buildsystems\vcpkg.cmake"
+    )
+    
+    # 检查环境变量
+    if ($env:VCPKG_ROOT) {
+        $vcpkgPaths += "$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
+    }
+    
+    foreach ($path in $vcpkgPaths) {
+        if (Test-Path $path) {
+            return $path
+        }
+    }
+    
+    return $null
+}
+
 # 安装依赖
 if ($InstallDeps) {
     Write-Host "[INFO] Installing dependencies..." -ForegroundColor Blue
@@ -77,9 +98,30 @@ if ($InstallDeps) {
         $env:CMAKE_TOOLCHAIN_FILE = "$($vcpkgPath | Split-Path)\scripts\buildsystems\vcpkg.cmake"
         Write-Host "[INFO] Using vcpkg toolchain: $env:CMAKE_TOOLCHAIN_FILE" -ForegroundColor Green
     } else {
-        Write-Host "[WARNING] vcpkg not found. Please install dependencies manually:" -ForegroundColor Yellow
-        Write-Host "  1. Install vcpkg from https://github.com/Microsoft/vcpkg" -ForegroundColor Yellow
-        Write-Host "  2. Run: vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows" -ForegroundColor Yellow
+        Write-Host "[WARNING] vcpkg not found. Installing vcpkg first..." -ForegroundColor Yellow
+        
+        try {
+            if (Test-Path "C:\") {
+                Set-Location "C:\"
+                git clone https://github.com/Microsoft/vcpkg.git
+                Set-Location "vcpkg"
+                .\bootstrap-vcpkg.bat
+                
+                Write-Host "[INFO] Installing dependencies..." -ForegroundColor Blue
+                .\vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows
+                .\vcpkg integrate install
+                
+                $env:CMAKE_TOOLCHAIN_FILE = "C:\vcpkg\scripts\buildsystems\vcpkg.cmake"
+                Set-Location $ProjectRoot
+                Write-Host "[SUCCESS] vcpkg and dependencies installed!" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "[ERROR] Failed to install vcpkg automatically." -ForegroundColor Red
+            Write-Host "Please install dependencies manually:" -ForegroundColor Yellow
+            Write-Host "  1. Install vcpkg from https://github.com/Microsoft/vcpkg" -ForegroundColor Yellow
+            Write-Host "  2. Run: vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows" -ForegroundColor Yellow
+            exit 1
+        }
     }
 }
 
@@ -106,6 +148,15 @@ if ($Generator) {
     $cmakeArgs += "-G", $Generator
 }
 
+# 查找并使用vcpkg工具链
+if (-not $env:CMAKE_TOOLCHAIN_FILE) {
+    $vcpkgToolchain = Find-VcpkgToolchain
+    if ($vcpkgToolchain) {
+        $env:CMAKE_TOOLCHAIN_FILE = $vcpkgToolchain
+        Write-Host "[INFO] Auto-detected vcpkg toolchain: $vcpkgToolchain" -ForegroundColor Green
+    }
+}
+
 if ($env:CMAKE_TOOLCHAIN_FILE) {
     $cmakeArgs += "-DCMAKE_TOOLCHAIN_FILE=$env:CMAKE_TOOLCHAIN_FILE"
 }
@@ -122,7 +173,29 @@ try {
         throw "CMake configuration failed"
     }
 } catch {
+    Write-Host ""
     Write-Host "[ERROR] CMake configuration failed!" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "[SOLUTION] This is likely due to missing Boost libraries. Try these solutions:" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "1. Install dependencies automatically:" -ForegroundColor Cyan
+    Write-Host "   .\build.ps1 -InstallDeps" -ForegroundColor White
+    Write-Host ""
+    Write-Host "2. Or run dependency setup script:" -ForegroundColor Cyan
+    Write-Host "   setup-deps.bat" -ForegroundColor White
+    Write-Host ""
+    Write-Host "3. Or manually install vcpkg and dependencies:" -ForegroundColor Cyan
+    Write-Host "   git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg" -ForegroundColor White
+    Write-Host "   C:\vcpkg\bootstrap-vcpkg.bat" -ForegroundColor White
+    Write-Host "   C:\vcpkg\vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows" -ForegroundColor White
+    Write-Host "   C:\vcpkg\vcpkg integrate install" -ForegroundColor White
+    Write-Host ""
+    Write-Host "4. Or set BOOST_ROOT environment variable:" -ForegroundColor Cyan
+    Write-Host "   `$env:BOOST_ROOT='C:\path\to\boost'" -ForegroundColor White
+    Write-Host ""
+    Write-Host "5. For MinGW users, install Boost via MSYS2:" -ForegroundColor Cyan
+    Write-Host "   pacman -S mingw-w64-x86_64-boost mingw-w64-x86_64-zlib" -ForegroundColor White
+    Write-Host ""
     Set-Location $ProjectRoot
     exit 1
 }

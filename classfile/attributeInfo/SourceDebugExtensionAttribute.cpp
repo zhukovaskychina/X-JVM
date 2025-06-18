@@ -3,6 +3,7 @@
 //
 
 #include "SourceDebugExtensionAttribute.h"
+#include "../../utils/PlatformCompat.h"
 
 ClassFile::SourceDebugExtensionAttribute::SourceDebugExtensionAttribute() {}
 
@@ -34,8 +35,12 @@ u4 ClassFile::SourceDebugExtensionAttribute::getAttributeLength() const {
     return AttributesInfo::getAttributeLength();
 }
 
-const std::string ClassFile::SourceDebugExtensionAttribute::getTags() const {
+std::string ClassFile::SourceDebugExtensionAttribute::toString() {
+#ifdef _MSC_VER
+    return std::string(AttributesInfo::getTags());
+#else
     return std::__cxx11::string(AttributesInfo::getTags());
+#endif
 }
 
 void ClassFile::SourceDebugExtensionAttribute::setTags(std::string tags) {

@@ -3,6 +3,7 @@
 //
 
 #include "Array.h"
+#include "../../utils/PlatformCompat.h"
 #include "../../runtime/heap/JavaClass.h"
 #include "../../common/JvmEnums.h"
 namespace Instruction{
@@ -13,7 +14,11 @@ namespace Instruction{
     void NewArray::execute(Runtime::JavaFrame *javaFrame) {
        int count= javaFrame->getOperandStack()->popInt();
         if(count<0){
+#ifdef _MSC_VER
             __throw_future_error(1);
+#else
+            throw std::runtime_error("Negative array size");
+#endif
         }
         Runtime::JavaClass* javaClass=javaFrame->getMethod()->getJavaClass();
         Runtime::JavaClass* arrayClass=getPrimitiveArrayClass(javaClass->getClassLoader(),this->atype);

@@ -5,9 +5,13 @@
 #ifndef JAVAP_FILEUTILS_H
 #define JAVAP_FILEUTILS_H
 
+#include "PlatformCompat.h"
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <sstream>
+#include <list>
+#include <vector>
+#include <fstream>
 #include "StringUtils.h"
 
 namespace fs=boost::filesystem;
@@ -66,14 +70,7 @@ namespace Utils {
         }
 
         static std::string readFileContent(std::string filePath) {
-
-
-            std::ifstream filestream(filePath, ios::in | ios::binary);
-            std::stringstream buffer;
-            buffer << filestream.rdbuf();
-            std::string contents(buffer.str());
-            filestream.close();
-            return contents;
+            return PlatformCompat::readFileContent(filePath);
         }
 
 

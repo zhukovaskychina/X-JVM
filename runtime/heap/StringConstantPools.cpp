@@ -1,12 +1,35 @@
 //
-// Created by zhukovasky on 2020/9/2.
+// Created by zhukovasky on 2020/8/11.
 //
 
 #include "StringConstantPools.h"
-#include "../../utils/StringUtils.h"
+#include "../../utils/PlatformCompat.h"
 
 namespace Runtime{
     namespace Heap{
+        StringConstantPools::StringConstantPools() {
+
+        }
+
+        StringConstantPools::StringConstantPools(u1 *charData) {
+            this->charData=charData;
+        }
+
+        u1 *StringConstantPools::getCharData() {
+            return this->charData;
+        }
+
+        void StringConstantPools::setCharData(u1 *charData) {
+            this->charData=charData;
+        }
+
+        std::string StringConstantPools::getContent() {
+#ifdef _MSC_VER
+            return std::string(charData);
+#else
+            return std::__cxx11::string(charData);
+#endif
+        }
 
         JString* JString::jStringInstance;
         Object* JString::getJString(ClassLoader *classLoader, std::string str) {

@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include "Slots.h"
+#include "../utils/PlatformCompat.h"
 namespace Runtime{
     Slots::Slots(long nums, Object *refs) : nums(nums), refs(refs) {
         this->nums=nums;
@@ -62,8 +63,12 @@ namespace Runtime{
         Slots::longValue = longValue;
     }
 
-    std::string Slots::getSlotType() {
+    std::string Slots::toString() {
+#ifdef _MSC_VER
+        return std::string(this->type);
+#else
         return std::__cxx11::string(this->type);
+#endif
     }
 
     uint8_t Slots::getByteValue() const {
