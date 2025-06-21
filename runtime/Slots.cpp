@@ -64,11 +64,11 @@ namespace Runtime{
     }
 
     std::string Slots::toString() {
-#ifdef _MSC_VER
         return std::string(this->type);
-#else
-        return std::__cxx11::string(this->type);
-#endif
+    }
+
+    std::string Slots::getSlotType() {
+        return this->type;
     }
 
     uint8_t Slots::getByteValue() const {

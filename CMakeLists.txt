@@ -82,9 +82,20 @@ if(WIN32)
         set(CMAKE_TOOLCHAIN_FILE "C:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
     endif()
     
-    # 设置vcpkg目标架构
+    # 设置vcpkg目标架构 - 智能检测编译器类型
     if(NOT DEFINED VCPKG_TARGET_TRIPLET)
-        set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR 
+           CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+           CMAKE_CXX_COMPILER MATCHES ".*mingw.*" OR
+           CMAKE_C_COMPILER MATCHES ".*mingw.*")
+            # 使用MinGW
+            set(VCPKG_TARGET_TRIPLET "x64-mingw-dynamic" CACHE STRING "")
+            message(STATUS "Detected MinGW/GCC compiler, using x64-mingw-dynamic triplet")
+        else()
+            # 使用MSVC
+            set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+            message(STATUS "Detected MSVC compiler, using x64-windows triplet")
+        endif()
     endif()
     
     message(STATUS "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}")
@@ -96,6 +107,30 @@ set(Boost_USE_STATIC_LIBS OFF)  # vcpkg默认使用动态库
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
+# MinGW 特殊配置
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND WIN32)
+    message(STATUS "Configuring for MinGW on Windows")
+    
+    # 优先查找 MinGW 编译的 Boost
+    set(MINGW_BOOST_SEARCH_PATHS
+        "C:/boost-mingw"
+        "C:/msys64/mingw64"
+        "C:/msys64/usr/local"
+        "${CMAKE_PREFIX_PATH}"
+        "$ENV{BOOST_ROOT}"
+    )
+    
+    foreach(path ${MINGW_BOOST_SEARCH_PATHS})
+        if(EXISTS "${path}")
+            list(APPEND CMAKE_PREFIX_PATH "${path}")
+            message(STATUS "Added MinGW Boost search path: ${path}")
+        endif()
+    endforeach()
+    
+    # 设置 MinGW 链接器标志
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++")
+endif()
+
 # Windows下使用vcpkg时的特殊设置
 if(WIN32 AND CMAKE_TOOLCHAIN_FILE)
     # vcpkg会自动处理这些设置
@@ -104,6 +139,7 @@ else()
     # 手动设置Boost路径 (fallback)
     if(WIN32 AND NOT DEFINED BOOST_ROOT AND NOT DEFINED ENV{BOOST_ROOT})
         set(BOOST_SEARCH_PATHS
+            "C:/boost-mingw"
             "C:/boost"
             "C:/boost_1_82_0"
             "C:/boost_1_81_0"
@@ -111,6 +147,8 @@ else()
             "C:/local/boost"
             "C:/vcpkg/installed/x64-windows"
             "C:/tools/vcpkg/installed/x64-windows"
+            "C:/vcpkg/installed/x64-mingw-dynamic"
+            "C:/tools/vcpkg/installed/x64-mingw-dynamic"
         )
         
         foreach(path ${BOOST_SEARCH_PATHS})
@@ -182,6 +220,7 @@ find_package(ZLIB)
 if(ZLIB_FOUND)
     message(STATUS "Found system zlib: ${ZLIB_VERSION_STRING}")
     set(ZLIB_TARGET ZLIB::ZLIB)
+    set(USE_BUNDLED_ZLIB FALSE)
 else()
     message(STATUS "System zlib not found")
     # 检查vcpkg是否有zlib
@@ -189,8 +228,25 @@ else()
     if(zlib_FOUND)
         message(STATUS "Found zlib via vcpkg")
         set(ZLIB_TARGET zlib::zlib)
+        set(USE_BUNDLED_ZLIB FALSE)
     else()
-        message(FATAL_ERROR "zlib not found! Please install zlib.")
+        message(STATUS "Neither system nor vcpkg zlib found, using bundled zlib")
+        # 使用内置zlib
+        set(USE_BUNDLED_ZLIB TRUE)
+        
+        # 添加内置zlib子目录
+        add_subdirectory(libs/zlib-1.2.11)
+        
+        # 设置zlib目标
+        set(ZLIB_TARGET zlib)
+        
+        # 手动设置zlib变量（兼容旧代码）
+        set(ZLIB_FOUND TRUE)
+        set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib-1.2.11 ${CMAKE_CURRENT_BINARY_DIR}/libs/zlib-1.2.11)
+        set(ZLIB_LIBRARIES zlib)
+        set(ZLIB_VERSION_STRING "1.2.11")
+        
+        message(STATUS "Using bundled zlib: ${ZLIB_VERSION_STRING}")
     endif()
 endif()
 
@@ -210,8 +266,8 @@ else()
 endif()
 
 # 如果使用内置zlib，添加其包含目录
-if(NOT ZLIB_FOUND)
-    include_directories(libs/zlib-1.2.11)
+if(USE_BUNDLED_ZLIB)
+    include_directories(${ZLIB_INCLUDE_DIRS})
 endif()
 
 # 源文件列表（分类组织）
@@ -528,13 +584,38 @@ if(PLATFORM_LINUX)
     list(APPEND PLATFORM_LIBS dl)
 endif()
 
-# 链接库
+# 链接库 - 修复Boost链接问题
 target_link_libraries(jvm
     ${ZLIB_TARGET}
-    ${BOOST_TARGETS}
     Threads::Threads
     ${PLATFORM_LIBS}
 )
+
+# 添加Boost库链接 - 根据发现方式选择合适的目标
+if(TARGET Boost::system AND TARGET Boost::filesystem AND TARGET Boost::program_options)
+    # 使用现代CMake目标 (vcpkg/CONFIG模式)
+    target_link_libraries(jvm
+        Boost::system
+        Boost::filesystem  
+        Boost::program_options
+    )
+    message(STATUS "Linking Boost using modern targets")
+elseif(Boost_LIBRARIES)
+    # 使用传统变量 (MODULE模式)
+    target_link_libraries(jvm ${Boost_LIBRARIES})
+    message(STATUS "Linking Boost using legacy variables: ${Boost_LIBRARIES}")
+else()
+    message(FATAL_ERROR "No valid Boost linking method found!")
+endif()
+
+# Windows下使用vcpkg时的特殊设置
+if(WIN32 AND CMAKE_TOOLCHAIN_FILE)
+    # 添加必要的编译定义以避免ABI问题
+    target_compile_definitions(jvm PRIVATE
+        BOOST_ALL_DYN_LINK=1
+        BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
+    )
+endif()
 
 # 设置链接目录 (仅当使用传统Boost变量时)
 if(Boost_LIBRARY_DIRS AND NOT TARGET Boost::boost)

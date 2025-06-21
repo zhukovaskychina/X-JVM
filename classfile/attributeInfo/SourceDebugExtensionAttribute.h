@@ -27,6 +27,8 @@ namespace ClassFile{
 
         u4 getAttributeLength() const override;
 
+        std::string toString();
+
         const std::string getTags() const override;
 
         void setTags(std::string tags) override;

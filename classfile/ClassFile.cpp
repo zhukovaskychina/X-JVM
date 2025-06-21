@@ -565,7 +565,8 @@ namespace ClassFile{
             localVariableTableAttribute->setAttributeLength(attribute_length);
             localVariableTableAttribute->setAttributeNameIndex(attribute_name_index);
             auto local_variable_table_length = byteQueue->popU2();
-            LocalVariableTable *localVariableTableEntries[local_variable_table_length];
+            // 使用vector替代VLA
+            std::vector<LocalVariableTable*> localVariableTable(local_variable_table_length);
             std::list<LocalVariableTable*> localVariableTableEntriesList;
             for (int i = 0; i < local_variable_table_length; ++i) {
                 LocalVariableTable *localVariableTable = new LocalVariableTable();
@@ -632,25 +633,20 @@ namespace ClassFile{
             bootstrapMethodAttribute->setAttributeLength(byteQueue->popU4());
 
             u2 numBootstrapMethods=byteQueue->popU2();
-            BootstrapMethod *bootstrapMethod[numBootstrapMethods];
+            // 使用vector替代VLA
+            std::vector<BootstrapMethod*> bootstrapMethod(numBootstrapMethods);
             std::list<BootstrapMethod*> bootstrapMethodList;
             for (int i = 0; i <numBootstrapMethods ; ++i) {
                 BootstrapMethod *bootstrapMethodIter=new BootstrapMethod;
                 bootstrapMethodIter->setBootstrapMethodRef(byteQueue->popU2());
                 u2 numbootstrapArguments=byteQueue->popU2();
-                VLA_DECLARE_PTR_ARRAY(u2, bootstrapArgutments, numbootstrapArguments);
+                std::vector<u2*> bootstrapArgutments(numbootstrapArguments);
                 for (int j = 0; j < numbootstrapArguments; ++j) {
-#ifdef _MSC_VER
                     bootstrapArgutments[j] = new u2(byteQueue->popU2());
-#else
-                    bootstrapArgutments[j]= reinterpret_cast<u2 *>(byteQueue->popU2());
-#endif
                 }
-#ifdef _MSC_VER
-                bootstrapMethodIter->setBootstrapMethodArguments(*bootstrapArgutments[0]);
-#else
-                bootstrapMethodIter->setBootstrapMethodArguments(*bootstrapArgutments);
-#endif
+                if (!bootstrapArgutments.empty()) {
+                    bootstrapMethodIter->setBootstrapMethodArguments(bootstrapArgutments[0]);
+                }
                 bootstrapMethodList.push_back(bootstrapMethodIter);
             }
             bootstrapMethodAttribute->setNumBootstrapMethods(numBootstrapMethods);
@@ -697,7 +693,8 @@ namespace ClassFile{
             innerClass->setAttributeLength(byteQueue->popU4());
 
             u2 numOfInnerClasses=byteQueue->popU2();
-            ClassessInner* classessInner[numOfInnerClasses];
+            // 使用vector替代VLA
+            std::vector<ClassessInner*> classessInner(numOfInnerClasses);
             for (int i = 0; i < numOfInnerClasses; ++i) {
                 ClassessInner *classessInnerIter=new ClassessInner();
                 classessInnerIter->setInnerClassAccessFlags(byteQueue->popU2());
@@ -707,7 +704,9 @@ namespace ClassFile{
                 classessInner[i]=classessInnerIter;
             }
             innerClass->setNumberOfClasses(numOfInnerClasses);
-            innerClass->setClassess(*classessInner);
+            if (!classessInner.empty()) {
+                innerClass->setClassess(classessInner[0]);
+            }
             innerClass->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(innerClass);
         }
@@ -734,11 +733,14 @@ namespace ClassFile{
             sourceDebugExtensionAttribute->setAttributeNameIndex(attribute_name_index);
             auto attributeLength=byteQueue->popU4();
             sourceDebugExtensionAttribute->setAttributeLength(attributeLength);
-            u1 *sourceDebugExtensions[attributeLength];
+            // 使用vector替代VLA
+            std::vector<u1> sourceDebugExtensions(attributeLength);
             for (int i = 0; i < attributeLength; ++i) {
-                *sourceDebugExtensions[i]=byteQueue->popU1();
+                sourceDebugExtensions[i] = byteQueue->popU1();
             }
-            sourceDebugExtensionAttribute->setDebugExtension(*sourceDebugExtensions);
+            if (!sourceDebugExtensions.empty()) {
+                sourceDebugExtensionAttribute->setDebugExtension(&sourceDebugExtensions[0]);
+            }
             sourceDebugExtensionAttribute->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(sourceDebugExtensionAttribute);
         }
@@ -748,7 +750,8 @@ namespace ClassFile{
             localVariableTableAttribute->setAttributeNameIndex(attribute_name_index);
             u2 localVariableTableLength=byteQueue->popU2();
             localVariableTableAttribute->setLocal_variable_table_length(localVariableTableLength);
-            LocalVariableTable* localVariableTable[localVariableTableLength];
+            // 使用vector替代VLA
+            std::vector<LocalVariableTable*> localVariableTable(localVariableTableLength);
             for (int i = 0; i < localVariableTableLength; ++i) {
                 LocalVariableTable *localVariableTableIter=new LocalVariableTable();
                 localVariableTableIter->setStart_pc(byteQueue->popU2());
@@ -758,7 +761,9 @@ namespace ClassFile{
                 localVariableTableIter->setIndex(byteQueue->popU2());
                 localVariableTable[i]=localVariableTableIter;
             }
-            localVariableTableAttribute->setLocalVariableTable(*localVariableTable);
+            if (!localVariableTable.empty()) {
+                localVariableTableAttribute->setLocalVariableTable(localVariableTable[0]);
+            }
             localVariableTableAttribute->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(localVariableTableAttribute);
         }
@@ -769,13 +774,15 @@ namespace ClassFile{
             runtimeInvisibleAnnotations->setAttributeLength(byteQueue->popU4());
             u2 num_annotations=byteQueue->popU2();
             runtimeInvisibleAnnotations->setNumAnnotations(num_annotations);
-            Annotation* annotations[num_annotations];
+            // 使用vector替代VLA
+            std::vector<Annotation*> annotations(num_annotations);
             for (int i = 0; i <num_annotations ; ++i) {
                 Annotation *annotation=new Annotation();
                 annotation->setTypeIndex(byteQueue->popU2());
                 u2 numElementValuePairs=byteQueue->popU2();
                 annotation->setNumElementValuePairs(numElementValuePairs);
-                ElementValuePairs* elementValuePairsArrays[numElementValuePairs];
+                // 使用vector替代VLA
+                std::vector<ElementValuePairs*> elementValuePairsArrays(numElementValuePairs);
                 for (int j = 0; j < numElementValuePairs; ++j) {
                     ElementValuePairs *elementValuePairs=new ElementValuePairs();
                     elementValuePairs->setElementNameIndex(byteQueue->popU2());
@@ -784,15 +791,17 @@ namespace ClassFile{
                     elementValuePairs->setElementValue(*elementValue);
                     elementValuePairsArrays[j]=elementValuePairs;
                 }
-                annotation->setElementValuePairs(*elementValuePairsArrays);
+                if (!elementValuePairsArrays.empty()) {
+                    annotation->setElementValuePairs(elementValuePairsArrays[0]);
+                }
                 annotations[i]=annotation;
                 delete(annotation);
             }
-            runtimeInvisibleAnnotations->setAnnotations(*annotations);
+            if (!annotations.empty()) {
+                runtimeInvisibleAnnotations->setAnnotations(annotations[0]);
+            }
             runtimeInvisibleAnnotations->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(runtimeInvisibleAnnotations);
-//            delete(runtimeInvisibleAnnotations);
-//            delete(*annotations);
         }
 
         if(strcmp("RuntimeVisibleParameterAnnotations",nameChar)==0){
@@ -801,72 +810,88 @@ namespace ClassFile{
             runtimeVisibleParameterAnnotations->setAttributeLength(byteQueue->popU4());
             u1 numParameters=byteQueue->popU1();
             runtimeVisibleParameterAnnotations->setNumParameters(numParameters);
-            ParameterAnnotations* parameterAnnotations[numParameters];
+            // 使用vector替代VLA
+            std::vector<ParameterAnnotations*> parameterAnnotations(numParameters);
             for (int i = 0; i < numParameters; ++i) {
                 ParameterAnnotations *parameterAnnotationsIter=new ParameterAnnotations();
                 u2 numAnnotations=byteQueue->popU2();
                 parameterAnnotationsIter->setNumAnnotations(numAnnotations);
-                Annotation* annotations[numAnnotations];
-                for (int i = 0; i <numAnnotations ; ++i) {
+                // 使用vector替代VLA
+                std::vector<Annotation*> annotations(numAnnotations);
+                for (int j = 0; j <numAnnotations ; ++j) {
                     Annotation *annotation=new Annotation();
                     annotation->setTypeIndex(byteQueue->popU2());
                     u2 numElementValuePairs=byteQueue->popU2();
                     annotation->setNumElementValuePairs(numElementValuePairs);
-                    ElementValuePairs* elementValuePairsArrays[numElementValuePairs];
-                    for (int j = 0; j < numElementValuePairs; ++j) {
-                        ElementValuePairs *elementValuePairs=new ElementValuePairs();
-                        elementValuePairs->setElementNameIndex(byteQueue->popU2());
+                    // 使用vector替代VLA
+                    std::vector<ElementValuePairs*> elementValuePairsArrays(numElementValuePairs);
+                    for (int k = 0; k < numElementValuePairs; ++k) {
+                        elementValuePairsArrays[k]=new ElementValuePairs();
+                        elementValuePairsArrays[k]->setElementNameIndex(byteQueue->popU2());
                         ElementValue *elementValue=new ElementValue();
                         elementValue->setTags(byteQueue->popU1());
-                        elementValuePairs->setElementValue(*elementValue);
-                        elementValuePairsArrays[j]=elementValuePairs;
+                        elementValuePairsArrays[k]->setElementValue(*elementValue);
                     }
-                    annotation->setElementValuePairs(*elementValuePairsArrays);
-                    annotations[i]=annotation;
+                    if (!elementValuePairsArrays.empty()) {
+                        annotation->setElementValuePairs(elementValuePairsArrays[0]);
+                    }
+                    annotations[j]=annotation;
                     delete(annotation);
                 }
-                parameterAnnotationsIter->setAnnotations(*annotations);
+                if (!annotations.empty()) {
+                    parameterAnnotationsIter->setAnnotations(annotations[0]);
+                }
             }
-            runtimeVisibleParameterAnnotations->setParameterAnnotations(*parameterAnnotations);
+            if (!parameterAnnotations.empty()) {
+                runtimeVisibleParameterAnnotations->setParameterAnnotations(parameterAnnotations[0]);
+            }
             runtimeVisibleParameterAnnotations->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(runtimeVisibleParameterAnnotations);
         }
 
         if(strcmp("RuntimeInvisibleParameterAnnotations",nameChar)==0){
-            RuntimeInvisibleParameterAnnotationAttributes *runtimeVisibleParameterAnnotations=new RuntimeInvisibleParameterAnnotationAttributes();
-            runtimeVisibleParameterAnnotations->setAttributeNameIndex(attribute_name_index);
-            runtimeVisibleParameterAnnotations->setAttributeLength(byteQueue->popU4());
+            RuntimeInvisibleParameterAnnotationAttributes *runtimeInvisibleParameterAnnotations=new RuntimeInvisibleParameterAnnotationAttributes();
+            runtimeInvisibleParameterAnnotations->setAttributeNameIndex(attribute_name_index);
+            runtimeInvisibleParameterAnnotations->setAttributeLength(byteQueue->popU4());
             u1 numParameters=byteQueue->popU1();
-            runtimeVisibleParameterAnnotations->setNumParameters(numParameters);
-            ParameterAnnotations* parameterAnnotations[numParameters];
+            runtimeInvisibleParameterAnnotations->setNumParameters(numParameters);
+            // 使用vector替代VLA
+            std::vector<ParameterAnnotations*> parameterAnnotations(numParameters);
             for (int i = 0; i < numParameters; ++i) {
                 ParameterAnnotations *parameterAnnotationsIter=new ParameterAnnotations();
                 u2 numAnnotations=byteQueue->popU2();
                 parameterAnnotationsIter->setNumAnnotations(numAnnotations);
-                Annotation* annotations[numAnnotations];
-                for (int i = 0; i <numAnnotations ; ++i) {
+                // 使用vector替代VLA
+                std::vector<Annotation*> annotations(numAnnotations);
+                for (int j = 0; j <numAnnotations ; ++j) {
                     Annotation *annotation=new Annotation();
                     annotation->setTypeIndex(byteQueue->popU2());
                     u2 numElementValuePairs=byteQueue->popU2();
                     annotation->setNumElementValuePairs(numElementValuePairs);
-                    ElementValuePairs* elementValuePairsArrays[numElementValuePairs];
-                    for (int j = 0; j < numElementValuePairs; ++j) {
-                        ElementValuePairs *elementValuePairs=new ElementValuePairs();
-                        elementValuePairs->setElementNameIndex(byteQueue->popU2());
+                    // 使用vector替代VLA
+                    std::vector<ElementValuePairs*> elementValuePairsArrays(numElementValuePairs);
+                    for (int k = 0; k < numElementValuePairs; ++k) {
+                        elementValuePairsArrays[k]=new ElementValuePairs();
+                        elementValuePairsArrays[k]->setElementNameIndex(byteQueue->popU2());
                         ElementValue *elementValue=new ElementValue();
                         elementValue->setTags(byteQueue->popU1());
-                        elementValuePairs->setElementValue(*elementValue);
-                        elementValuePairsArrays[j]=elementValuePairs;
+                        elementValuePairsArrays[k]->setElementValue(*elementValue);
                     }
-                    annotation->setElementValuePairs(*elementValuePairsArrays);
-                    annotations[i]=annotation;
+                    if (!elementValuePairsArrays.empty()) {
+                        annotation->setElementValuePairs(elementValuePairsArrays[0]);
+                    }
+                    annotations[j]=annotation;
                     delete(annotation);
                 }
-                parameterAnnotationsIter->setAnnotations(*annotations);
+                if (!annotations.empty()) {
+                    parameterAnnotationsIter->setAnnotations(annotations[0]);
+                }
             }
-            runtimeVisibleParameterAnnotations->setParameterAnnotations(*parameterAnnotations);
-            runtimeVisibleParameterAnnotations->setTags(nameChar);
-            attributeInfo= reinterpret_cast<AttributesInfo*>(runtimeVisibleParameterAnnotations);
+            if (!parameterAnnotations.empty()) {
+                runtimeInvisibleParameterAnnotations->setParameterAnnotations(parameterAnnotations[0]);
+            }
+            runtimeInvisibleParameterAnnotations->setTags(nameChar);
+            attributeInfo= reinterpret_cast<AttributesInfo*>(runtimeInvisibleParameterAnnotations);
         }
         if(strcmp("AnnotationDefault",nameChar)==0){
             AnnotationDefaultAttribute *annotationDefault=new AnnotationDefaultAttribute();
@@ -976,14 +1001,18 @@ namespace ClassFile{
             methodParameterAttributes->setAttributeNameIndex(attribute_name_index);
             methodParameterAttributes->setAttributeLength(byteQueue->popU4());
             u1 parametersCount=byteQueue->popU1();
-            Parameters* parameters[parametersCount];
+            // 使用vector替代VLA
+            std::vector<Parameters*> parameters(parametersCount);
             for (int i = 0; i < parametersCount; ++i) {
                 Parameters *parametersIter=new Parameters();
                 parametersIter->setNameIndex(byteQueue->popU2());
                 parametersIter->setAccessFlags(byteQueue->popU2());
+                parameters[i] = parametersIter;
             }
             methodParameterAttributes->setParameterCounts(parametersCount);
-            methodParameterAttributes->setParameters(*parameters);
+            if (!parameters.empty()) {
+                methodParameterAttributes->setParameters(parameters[0]);
+            }
             methodParameterAttributes->setTags(nameChar);
             attributeInfo= reinterpret_cast<AttributesInfo*>(methodParameterAttributes);
         }
@@ -1025,11 +1054,7 @@ namespace ClassFile{
         auto utf8=reinterpret_cast<Constant_Utf8Info*>(&constantPools);
         auto  bytes=utf8->getBytes();
         auto length=utf8->getLength();
-#ifdef _MSC_VER
         std::string str(reinterpret_cast<const char*>(bytes), length);
-#else
-        std::__cxx11::string str(reinterpret_cast<const char*>(bytes), length);
-#endif
         return str;
     }
 
@@ -1042,19 +1067,42 @@ namespace ClassFile{
         return this->getUTF8(index);
     }
 
-    std::string ClassFile::getMethodAccessFlags(u2 index) {
-        std::string methodAccessFlags="";
-        return std::__cxx11::string();
+    std::string ClassFile::getMethodAccessFlags(u2 accessFlags) {
+        std::vector<std::string> flags;
+        
+        // 检查各种访问标志位
+        if (accessFlags & 0x0001) flags.push_back("public");
+        if (accessFlags & 0x0002) flags.push_back("private");
+        if (accessFlags & 0x0004) flags.push_back("protected");
+        if (accessFlags & 0x0008) flags.push_back("static");
+        if (accessFlags & 0x0010) flags.push_back("final");
+        if (accessFlags & 0x0020) flags.push_back("synchronized");
+        if (accessFlags & 0x0040) flags.push_back("bridge");
+        if (accessFlags & 0x0080) flags.push_back("varargs");
+        if (accessFlags & 0x0100) flags.push_back("native");
+        if (accessFlags & 0x0400) flags.push_back("abstract");
+        if (accessFlags & 0x0800) flags.push_back("strict");
+        if (accessFlags & 0x1000) flags.push_back("synthetic");
+        
+        // 拼接所有标志
+        std::string result = "";
+        for (size_t i = 0; i < flags.size(); ++i) {
+            if (i > 0) result += " ";
+            result += flags[i];
+        }
+        
+        return result;
     }
 
     Methods* ClassFile::getMethods() {
-        Methods *methods[this->methodCount];
+        // 使用vector替代VLA
+        std::vector<Methods*> methods(this->methodCount);
         for (int i = 0; i < this->methodCount; ++i) {
 
             std::string methodName=this->getMethodName(this->methodInfo[i].getNameIndex());
 
         }
-        return *methods;
+        return methods.empty() ? nullptr : methods[0];
     }
 
     std::vector<std::string> ClassFile::getInterfaceNames() {

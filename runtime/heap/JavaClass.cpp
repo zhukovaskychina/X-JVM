@@ -286,7 +286,7 @@ namespace Runtime{
         ClassFile::Constant_Utf8Info *constantUtf8Info= reinterpret_cast<ClassFile::Constant_Utf8Info*>(classFileConstantsPools->getIndex(index));
 
         std::string result=constantUtf8Info->toString();
-        return std::__cxx11::string(result);
+        return std::string(result);
     }
 
     std::string JavaClass::getClassName(u2 index, ClassFile::ConstantPoolsList *constantPools) {
@@ -384,14 +384,16 @@ namespace Runtime{
 
     std::string JavaClass::getPackageName() {
         this->getThisClassName();
-        return std::__cxx11::string();
+        return std::string();
     }
     //创建类实例
     Object *JavaClass::createNewJavaObjectInstance() {
         Object *object=new Object(this);
         object->setJavaClass(this);
-        Slots* slots[this->instanceCount];
-        object->setFields(*slots);
+        std::vector<Slots*> slots(this->instanceCount);
+        if (!slots.empty()) {
+            object->setFields(slots[0]);
+        }
         return object;
     }
 
@@ -456,11 +458,13 @@ namespace Runtime{
         Object* object=new Object(this);
         std::string className=thisClassName;
         object->setObjectType(className);
-            const Slots* slots[length];
-            object->setData((void*) slots);
-            object->setFields((Slots *) slots);
-            //object->setFields();
-            return object;
+        std::vector<const Slots*> slots(length);
+        object->setData((void*) slots.data());
+        if (!slots.empty()) {
+            object->setFields((Slots *) slots[0]);
+        }
+        //object->setFields();
+        return object;
 
     }
 
@@ -545,18 +549,15 @@ namespace Runtime{
     }
 
     std::string JavaClass::getString() {
-#ifdef _MSC_VER
-        return std::string(result);
-#else
-        return std::__cxx11::string(result);
-#endif
+        std::string result = "JavaClass{" + thisClassName + "}";
+        return result;
     }
 
     std::string JavaClass::getConstantPoolString(u2 index) {
 #ifdef _MSC_VER
         return std::string();
 #else
-        return std::__cxx11::string();
+        return std::string();
 #endif
     }
 

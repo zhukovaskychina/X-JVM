@@ -41,11 +41,11 @@ namespace ClassFile{
     }
 
     std::string ConstantValue::toString() {
-#ifdef _MSC_VER
         return std::string(AttributesInfo::getTags());
-#else
-        return std::__cxx11::string(AttributesInfo::getTags());
-#endif
+    }
+
+    const std::string ConstantValue::getTags() const {
+        return AttributesInfo::getTags();
     }
 
     void ConstantValue::setTags(std::string tags) {

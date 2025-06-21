@@ -39,8 +39,12 @@ std::string ClassFile::SourceDebugExtensionAttribute::toString() {
 #ifdef _MSC_VER
     return std::string(AttributesInfo::getTags());
 #else
-    return std::__cxx11::string(AttributesInfo::getTags());
+    return std::string(AttributesInfo::getTags());
 #endif
+}
+
+const std::string ClassFile::SourceDebugExtensionAttribute::getTags() const {
+    return AttributesInfo::getTags();
 }
 
 void ClassFile::SourceDebugExtensionAttribute::setTags(std::string tags) {

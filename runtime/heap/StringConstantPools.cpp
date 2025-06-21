@@ -7,30 +7,6 @@
 
 namespace Runtime{
     namespace Heap{
-        StringConstantPools::StringConstantPools() {
-
-        }
-
-        StringConstantPools::StringConstantPools(u1 *charData) {
-            this->charData=charData;
-        }
-
-        u1 *StringConstantPools::getCharData() {
-            return this->charData;
-        }
-
-        void StringConstantPools::setCharData(u1 *charData) {
-            this->charData=charData;
-        }
-
-        std::string StringConstantPools::getContent() {
-#ifdef _MSC_VER
-            return std::string(charData);
-#else
-            return std::__cxx11::string(charData);
-#endif
-        }
-
         JString* JString::jStringInstance;
         Object* JString::getJString(ClassLoader *classLoader, std::string str) {
             Object *obj=stringMap[str];
@@ -53,7 +29,7 @@ namespace Runtime{
         std::string JString::getJavaString(Object *object) {
             char * charData=(char *)object->getData();
       //      string result=Utils::StringUtils::convertWStringToString(charData);
-            return std::__cxx11::string(charData);
+            return std::string(charData);
         }
 
         JString *JString::getJString() {

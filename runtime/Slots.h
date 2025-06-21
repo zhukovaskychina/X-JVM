@@ -7,6 +7,7 @@
 
 #include "Object.h"
 #include <iostream>
+#include <cstdint>
 namespace Runtime{
 
     class Object;
@@ -38,6 +39,8 @@ namespace Runtime{
         long getLongValue() const;
 
         void setLongValue(long longValue);
+
+        std::string toString();
 
         std::string getSlotType();
 

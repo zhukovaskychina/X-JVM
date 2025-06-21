@@ -35,7 +35,7 @@ namespace ClassFile{
     }
 
     const string AnnotationDefaultAttribute::getTags() const {
-        return std::__cxx11::string(AttributesInfo::getTags());
+        return std::string(AttributesInfo::getTags());
     }
 
     void AnnotationDefaultAttribute::setTags(std::string tags) {

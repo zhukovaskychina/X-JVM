@@ -43,7 +43,7 @@ u4 ClassFile::RuntimeInvisibleAnnotations::getAttributeLength() const {
 }
 
 const string ClassFile::RuntimeInvisibleAnnotations::getTags() const {
-    return std::__cxx11::string(AttributesInfo::getTags());
+    return std::string(AttributesInfo::getTags());
 }
 
 void ClassFile::RuntimeInvisibleAnnotations::setTags(std::string tags) {

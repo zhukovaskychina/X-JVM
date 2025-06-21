@@ -20,11 +20,17 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
+    std::cout << "=== X-JVM Starting ===" << std::endl;
+    std::cout << "argc: " << argc << std::endl;
+    for(int i = 0; i < argc; i++) {
+        std::cout << "argv[" << i << "]: " << argv[i] << std::endl;
+    }
+    std::cout.flush();
 
     mtx.lock();
 
-
     try {
+        std::cout << "Parsing command line options..." << std::endl;
         options_description desc("zhukovasky的java   \n"
                                  "author: zhukovasky\n"
                                  "Usage: jvm [-options]  [args...]\n"
@@ -40,6 +46,8 @@ int main(int argc, char **argv)
         variables_map vm;
         store(parse_command_line(argc, argv, desc), vm);
         notify(vm);
+
+        std::cout << "Command line parsed successfully" << std::endl;
 
         if (vm.count("help")) {
             cout << desc << "\n";
@@ -87,8 +95,9 @@ int main(int argc, char **argv)
                 cerr<<"java虚拟机找不到主方法"<<endl;
                 exit(0);
             }
-            Interpret::Interpret *interpret;
+            Interpret::Interpret *interpret = new Interpret::Interpret();
             interpret->execByteCode(mainMethod);
+            delete interpret;
             //执行引擎执行java
         });
         result.share().get();

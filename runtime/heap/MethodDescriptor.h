@@ -24,6 +24,8 @@ namespace Runtime{
 
             void setReturnType(const string &returnType);
 
+            std::string getParameterTypes();
+
             virtual ~MethodDescriptor();
 
 

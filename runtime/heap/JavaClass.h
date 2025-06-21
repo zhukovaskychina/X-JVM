@@ -61,6 +61,10 @@ namespace Runtime{
 
         Heap::Method* getStaticMethod(std::string name,std::string descriptor);
 
+        std::string getString();
+
+        std::string getConstantPoolString(u2 index);
+
         Heap::Method *getMethodInfos() const;
 
         void setMethodInfos(Heap::Method *methodInfos);

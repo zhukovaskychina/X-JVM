@@ -101,14 +101,14 @@ namespace Runtime{
             int start=this->offset-1;
             int end=this->offset+pos+1;
 
-            return std::__cxx11::string(this->readSpecifiedCharsInPositions(start,end));
+            return std::string(this->readSpecifiedCharsInPositions(start,end));
         }
 
         std::string MethodDescriptorParser::parseArrayType() {
             int start=this->offset-1;
             this->parseFieldType();
             int end=this->offset;
-            return std::__cxx11::string(this->readSpecifiedCharsInPositions(start,end));
+            return std::string(this->readSpecifiedCharsInPositions(start,end));
         }
 
         std::string MethodDescriptorParser::parseFieldType() {
@@ -150,32 +150,32 @@ namespace Runtime{
             }
         }
 
-        char *MethodDescriptorParser::readRest() {
-            int size=this->raw.size();
-            char *res[size-this->offset];
-            for (int i = 0; i < (size-this->offset); ++i) {
-                int index=size-this->offset;
-                res[i]= reinterpret_cast<char *>(this->charArrays[index+1]);
+        char* MethodDescriptorParser::readRest() {
+            int size = this->raw.size();
+            char* res = new char[size - this->offset + 1];
+            for (int i = this->offset; i < size; ++i) {
+                res[i - this->offset] = this->charArrays[i];
             }
-            return reinterpret_cast<char *>(res);
+            res[size - this->offset] = '\0';
+            return res;
         }
 
         std::string MethodDescriptorParser::readSpecifiedCharsInPositions(int start, int end) {
-            char *res[end-start];
-
-            for (int i = 0; i < end-start; ++i) {
-                res[i]= reinterpret_cast<char *>(this->charArrays[i + start]);
+            std::string result;
+            for (int i = start; i < end; ++i) {
+                result += this->charArrays[i];
             }
-
-            return reinterpret_cast<basic_string<char> &&>(res);
+            return result;
         }
 
         std::string MethodDescriptor::getParameterTypes() {
-#ifdef _MSC_VER
-            return std::string(this->readSpecifiedCharsInPositions(start,end));
-#else
-            return std::__cxx11::string(this->readSpecifiedCharsInPositions(start,end));
-#endif
+            // 返回参数类型的字符串表示
+            std::string result = "(";
+            for (const auto& param : parameterType) {
+                result += param;
+            }
+            result += ")";
+            return result;
         }
     }
 }
