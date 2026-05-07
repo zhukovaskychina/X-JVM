@@ -8,12 +8,25 @@
 
 #include "RuntimeStack.h"
 #include "JavaRuntime.h"
+#include <atomic>
+#include <cstdint>
 #include <thread>
 #include <mutex>
 namespace Runtime{
     class JavaFrame;
     class RuntimeStack;
     class JavaHeap;
+
+    /** 解释器线程粗粒度状态（与 java.lang.Thread.State 对齐方向；后续接 park/safepoint）。 */
+    enum class JavaThreadState : std::uint8_t {
+        New = 0,
+        Runnable,
+        Blocked,
+        Waiting,
+        TimedWaiting,
+        Terminated
+    };
+
     class JavaThread {
 
     public:
@@ -53,6 +66,17 @@ namespace Runtime{
 
         virtual ~JavaThread();
 
+        /** 当前解释线程关联的堆（带堆执行路径设置；ldc 等据此把驻留字符串分配进堆）。 */
+        JavaHeap *getJavaHeap() const;
+
+        void setJavaHeap(JavaHeap *heap);
+
+        JavaThreadState getThreadState() const { return threadState_; }
+        void setThreadState(JavaThreadState s) { threadState_ = s; }
+
+        void interrupt();
+        bool isInterrupted(bool clear);
+
     private:
         int stackSize;
         long pcAddress;
@@ -69,6 +93,9 @@ namespace Runtime{
         Runtime::JavaHeap *javaHeap;
 
         Runtime::JavaRuntimeEnv *jEnv;
+
+        JavaThreadState threadState_{JavaThreadState::New};
+        std::atomic<bool> interrupted_{false};
     };
 
 }

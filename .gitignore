@@ -1,3 +1,11 @@
+# Build / local
+build/
+build_*/
+out/
+runtime/synthetic/stubs/out/
+runtime/synthetic/stubs/**/*.class
+.cmake/
+
 # Prerequisites
 *.d
 

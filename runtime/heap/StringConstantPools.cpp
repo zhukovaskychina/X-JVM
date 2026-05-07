@@ -3,24 +3,28 @@
 //
 
 #include "StringConstantPools.h"
+#include "JavaHeap.h"
 #include "../../utils/PlatformCompat.h"
 
 namespace Runtime{
     namespace Heap{
         JString* JString::jStringInstance;
-        Object* JString::getJString(ClassLoader *classLoader, std::string str) {
+        Object* JString::getJString(ClassLoader *classLoader, std::string str, Runtime::JavaHeap *javaHeap) {
             Object *obj=stringMap[str];
             if(obj!= nullptr){
                 return obj;
             }
-          //  u16string u16Str=Utils::StringUtils::convertStringToWS(str);
-          //  const char16_t * chars=u16Str.c_str();
-            Object *object=new Object();
             JavaClass* javaClass=classLoader->loadClass("java/lang/String");
-            object->setJavaClass(javaClass);
+            Object *object = nullptr;
+            if (javaHeap != nullptr) {
+                object = javaHeap->createJavaObject(javaClass);
+            } else {
+                object = new Object();
+                object->setJavaClass(javaClass);
+            }
             char* result=new char[str.length()+1];
             strcpy(result,str.c_str());
-            object->setData((void*)(result));
+            object->setData(static_cast<void*>(result));
             object->setObjectType("char");
             stringMap[str]=object;
             return object;
@@ -46,19 +50,22 @@ namespace Runtime{
 
         }
 
-        Object *JString::getJString(Runtime::MethodArea *methodArea, std::string str) {
+        Object *JString::getJString(Runtime::MethodArea *methodArea, std::string str, Runtime::JavaHeap *javaHeap) {
             Object *obj=stringMap[str];
             if(obj!= nullptr){
                 return obj;
             }
-            //  u16string u16Str=Utils::StringUtils::convertStringToWS(str);
-            //  const char16_t * chars=u16Str.c_str();
-            Object *object=new Object();
             JavaClass* javaClass=methodArea->loadClass("java/lang/String");
-            object->setJavaClass(javaClass);
+            Object *object = nullptr;
+            if (javaHeap != nullptr) {
+                object = javaHeap->createJavaObject(javaClass);
+            } else {
+                object = new Object();
+                object->setJavaClass(javaClass);
+            }
             char* result=new char[str.length()+1];
             strcpy(result,str.c_str());
-            object->setData((void*)(result));
+            object->setData(static_cast<void*>(result));
             object->setObjectType("char");
             stringMap[str]=object;
             return object;

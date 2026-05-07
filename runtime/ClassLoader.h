@@ -71,6 +71,8 @@ namespace Runtime{
         JavaClass* loadClass(std::string className);
         JavaClass* loadArrayClass(std::string className);
         JavaClass* loadNonArrayClass(std::string className);
+        /** 已解析并放入 classMap 的类；未加载则 nullptr（不向 map 插入占位项）。 */
+        JavaClass* getLoadedClass(const std::string& className);
         Heap::Entry* readClass(std::string className);
         JavaClass* defineClass(Lang::ByteQueue* data);
         JavaClass* parseClass(u1* data);
@@ -78,6 +80,18 @@ namespace Runtime{
         void resolveInterfaces(JavaClass *javaClass);
         void link(JavaClass *javaClass);
         void prepare(JavaClass *javaClass);
+
+        /** 枚举当前 ClassLoader 已加载的类（如 GC 扫描静态槽）。 */
+        template<typename Fn>
+        void forEachLoadedClass(Fn&& fn) const {
+            for (const auto& kv : classMap) {
+                JavaClass* jc = kv.second;
+                if (jc) {
+                    fn(jc);
+                }
+            }
+        }
+
     private:
 
         //初始化bootstrap classloader

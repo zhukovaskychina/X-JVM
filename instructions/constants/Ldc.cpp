@@ -7,6 +7,11 @@
 #include "../../runtime/heap/ClassMember.h"
 #include "../../runtime/heap/ConstantsPoolObject.h"
 #include "../../runtime/heap/StringConstantPools.h"
+
+namespace Runtime {
+class JavaHeap;
+}
+
 namespace Instruction{
     void LDC::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaClass* javaClass=javaFrame->getMethod()->getJavaClass();
@@ -29,7 +34,9 @@ namespace Instruction{
             return;
         }
         if(constantPoolObject->getConstantType()=="string"){
-           Runtime::Object* obj=Runtime::Heap::JString::getJString()->getJString(javaClass->getClassLoader(),constantPoolObject->getStringValue());
+           Runtime::JavaHeap* heap = javaFrame->getJavaThread() ? javaFrame->getJavaThread()->getJavaHeap() : nullptr;
+           Runtime::Object* obj = Runtime::Heap::JString::getJString()->getJString(
+               javaClass->getClassLoader(), constantPoolObject->getStringValue(), heap);
            javaFrame->getOperandStack()->pushRef(obj);
             return;
         }
@@ -58,7 +65,10 @@ namespace Instruction{
             return;
         }
         if(constantPoolObject->getConstantType()=="string"){
-            // javaFrame->getOperandStack().push(constantPoolObject->getIntValue());
+            Runtime::JavaHeap* heap = javaFrame->getJavaThread() ? javaFrame->getJavaThread()->getJavaHeap() : nullptr;
+            Runtime::Object* obj = Runtime::Heap::JString::getJString()->getJString(
+                javaClass->getClassLoader(), constantPoolObject->getStringValue(), heap);
+            javaFrame->getOperandStack()->pushRef(obj);
             return;
         }
     }
@@ -84,7 +94,10 @@ namespace Instruction{
             return;
         }
         if(constantPoolObject->getConstantType()=="string"){
-            // javaFrame->getOperandStack().push(constantPoolObject->getIntValue());
+            Runtime::JavaHeap* heap = javaFrame->getJavaThread() ? javaFrame->getJavaThread()->getJavaHeap() : nullptr;
+            Runtime::Object* obj = Runtime::Heap::JString::getJString()->getJString(
+                javaClass->getClassLoader(), constantPoolObject->getStringValue(), heap);
+            javaFrame->getOperandStack()->pushRef(obj);
             return;
         }
     }

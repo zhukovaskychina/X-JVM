@@ -48,6 +48,7 @@ namespace Runtime{
     void RuntimeStack::clear() {
         while (!this->innerStack.empty()){
             delete this->innerStack.top();
+            this->innerStack.pop();
         }
     }
 }

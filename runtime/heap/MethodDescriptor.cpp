@@ -2,11 +2,11 @@
 // Created by zhukovasky on 2020/8/31.
 //
 
-#include <cstring>
 #include "MethodDescriptor.h"
-#include "../../utils/PlatformCompat.h"
+
 namespace Runtime{
     namespace Heap{
+
         const list<std::string> &MethodDescriptor::getParameterType() const {
             return parameterType;
         }
@@ -31,145 +31,172 @@ namespace Runtime{
         }
 
         void MethodDescriptorParser::startParams() {
-            if(this->readU1()!='('){
-
+            if (offset >= static_cast<int>(raw.size())) {
+                ok_ = false;
+                return;
             }
+            if (static_cast<unsigned char>(charArrays[offset]) != '(') {
+                ok_ = false;
+                return;
+            }
+            offset++;
         }
 
         void MethodDescriptorParser::parseParamTypes() {
-
+            std::list<std::string> params;
+            while (offset < static_cast<int>(raw.size())) {
+                u1 c = readU1();
+                if (c == ')') {
+                    unreadU1();
+                    break;
+                }
+                unreadU1();
+                std::string ft = parseFieldType();
+                if (ft.empty()) {
+                    ok_ = false;
+                    return;
+                }
+                params.push_back(ft);
+            }
+            if (ok_) {
+                methodDescriptor->setParameterType(params);
+            }
         }
 
         void MethodDescriptorParser::endParams() {
-            if(this->readU1()!=')'){
-
+            if (offset >= static_cast<int>(raw.size()) || readU1() != ')') {
+                ok_ = false;
             }
         }
 
         void MethodDescriptorParser::parseReturnType() {
-            if(this->readU1()=='V'){
+            if (offset >= static_cast<int>(raw.size())) {
+                ok_ = false;
+                return;
+            }
+            if (readU1() == 'V') {
                 this->methodDescriptor->setReturnType("V");
                 return;
             }
             this->unreadU1();
-            string fieldType=this->parseFieldType();
-            if(fieldType!=""){
+            std::string fieldType = this->parseFieldType();
+            if (!fieldType.empty()) {
                 this->methodDescriptor->setReturnType(fieldType);
                 return;
             }
-
+            ok_ = false;
         }
 
         void MethodDescriptorParser::finish() {
-            if(this->offset!=this->raw.size()){
-
+            if (offset != static_cast<int>(raw.size())) {
+                ok_ = false;
             }
         }
 
         MethodDescriptor *MethodDescriptorParser::parse(std::string descriptor) {
-            this->raw=descriptor;
-            this->offset=0;
-            this->charArrays = new char[raw.size()];
-            memcpy(this->charArrays, raw.c_str(), raw.length());
-            this->methodDescriptor=new MethodDescriptor();
-            this->startParams();
-            this->parseParamTypes();
-            this->endParams();
-            this->parseReturnType();
-            this->finish();
-            return this->methodDescriptor;
+            ok_ = true;
+            raw = std::move(descriptor);
+            storage_.assign(raw.begin(), raw.end());
+            charArrays = storage_.empty() ? nullptr : storage_.data();
+            offset = 0;
+            methodDescriptor = new MethodDescriptor();
+            startParams();
+            if (ok_) {
+                parseParamTypes();
+            }
+            if (ok_) {
+                endParams();
+            }
+            if (ok_) {
+                parseReturnType();
+            }
+            if (ok_) {
+                finish();
+            }
+            if (!ok_) {
+                delete methodDescriptor;
+                methodDescriptor = nullptr;
+                return nullptr;
+            }
+            return methodDescriptor;
         }
 
         u1 MethodDescriptorParser::readU1() {
-            u1 result=getu1(this->charArrays[this->offset]);
-            this->offset++;
+            if (offset >= static_cast<int>(raw.size()) || !charArrays) {
+                ok_ = false;
+                return 0;
+            }
+            u1 result = static_cast<u1>(static_cast<unsigned char>(charArrays[offset]));
+            offset++;
             return result;
         }
 
         void MethodDescriptorParser::unreadU1() {
-            this->offset--;
+            if (offset > 0) {
+                offset--;
+            }
         }
 
         std::string MethodDescriptorParser::parseObjectType() {
-            std::string unread=this->readRest();
-            int pos=unread.find(";",0);
-            if(pos==-1){
-                //报错
-                cerr<<"此处报错"<<endl;
-                exit(1);
+            const int start = this->offset - 1;
+            const std::size_t pos = raw.find(';', static_cast<std::size_t>(this->offset));
+            if (pos == std::string::npos) {
+                ok_ = false;
+                return "";
             }
-            int start=this->offset-1;
-            int end=this->offset+pos+1;
-
-            return std::string(this->readSpecifiedCharsInPositions(start,end));
+            const int end = static_cast<int>(pos) + 1;
+            this->offset = end;
+            return this->readSpecifiedCharsInPositions(start, end);
         }
 
         std::string MethodDescriptorParser::parseArrayType() {
-            int start=this->offset-1;
+            int start = this->offset - 1;
             this->parseFieldType();
-            int end=this->offset;
-            return std::string(this->readSpecifiedCharsInPositions(start,end));
+            int end = this->offset;
+            return std::string(this->readSpecifiedCharsInPositions(start, end));
         }
 
         std::string MethodDescriptorParser::parseFieldType() {
-            u1 type=this->readU1();
-            switch(type){
-                case 'B':{
+            u1 type = this->readU1();
+            switch (type) {
+                case 'B':
                     return "B";
-                }
-                case 'C':{
+                case 'C':
                     return "C";
-                }
-                case 'D':{
+                case 'D':
                     return "D";
-                }
-                case 'F':{
+                case 'F':
                     return "F";
-                }
-                case 'I':{
+                case 'I':
                     return "I";
-                }
-                case 'J':{
+                case 'J':
                     return "J";
-                }
-                case 'S':{
+                case 'S':
                     return "S";
-                }
-                case 'Z':{
+                case 'Z':
                     return "Z";
-                }
-                case 'L':{
+                case 'L':
                     return this->parseObjectType();
-                }
-                case '[':{
+                case '[':
                     return this->parseArrayType();
-                }
-                default:{
-                    "";
-                }
+                default:
+                    return "";
             }
-        }
-
-        char* MethodDescriptorParser::readRest() {
-            int size = this->raw.size();
-            char* res = new char[size - this->offset + 1];
-            for (int i = this->offset; i < size; ++i) {
-                res[i - this->offset] = this->charArrays[i];
-            }
-            res[size - this->offset] = '\0';
-            return res;
         }
 
         std::string MethodDescriptorParser::readSpecifiedCharsInPositions(int start, int end) {
             std::string result;
+            if (!charArrays || start < 0 || end > static_cast<int>(raw.size()) || start > end) {
+                ok_ = false;
+                return result;
+            }
             for (int i = start; i < end; ++i) {
-                result += this->charArrays[i];
+                result += charArrays[i];
             }
             return result;
         }
 
         std::string MethodDescriptor::getParameterTypes() {
-            // 返回参数类型的字符串表示
             std::string result = "(";
             for (const auto& param : parameterType) {
                 result += param;

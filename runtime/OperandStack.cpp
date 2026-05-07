@@ -107,7 +107,29 @@ namespace Runtime{
         this->size=this->size+1;
     }
 
+    void OperandStack::clear() {
+        // 注意：Slots 析构会 delete refs；这里仅逻辑清栈，避免误释放仍被堆/局部变量持有的对象。
+        innerSlotsList.clear();
+        size = 0;
+    }
+
     Object *OperandStack::getRefFromTop(long index) {
-        return this->innerSlotsList[this->size-1]->getRefs();
+        (void)index;
+        if (this->size < 1) {
+            return nullptr;
+        }
+        return this->innerSlotsList[static_cast<size_t>(this->size - 1)]->getRefs();
+    }
+
+    Object* OperandStack::peekReceiverForInvoke(int totalInvokeSlots) const {
+        if (totalInvokeSlots < 1 || this->size < totalInvokeSlots) {
+            return nullptr;
+        }
+        const int base = this->size - totalInvokeSlots;
+        Slots* slot = this->innerSlotsList[static_cast<size_t>(base)];
+        if (!slot) {
+            return nullptr;
+        }
+        return slot->getRefs();
     }
 };

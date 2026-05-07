@@ -10,6 +10,11 @@
 #include "../runtime/JavaThread.h"
 #include "../runtime/heap/JavaHeap.h"
 
+namespace Runtime {
+    class ClassLoader;
+    class MethodArea;
+}
+
 namespace Interpret{
     class Interpret {
 
@@ -33,7 +38,8 @@ namespace Interpret{
          * @param javaHeap Java堆对象
          * @throws std::runtime_error 当参数为空或执行失败时
          */
-        void execByteCode(Runtime::Heap::Method* method,Runtime::JavaHeap* javaHeap);
+        void execByteCode(Runtime::Heap::Method* method, Runtime::JavaHeap* javaHeap,
+                          Runtime::ClassLoader* classLoader = nullptr, Runtime::MethodArea* methodArea = nullptr);
 
     private:
         /**
@@ -49,7 +55,8 @@ namespace Interpret{
          * @param javaHeap Java堆对象
          * @throws std::runtime_error 当参数为空或执行失败时
          */
-        void loopJavaFrameWithHeap(Runtime::JavaThread* javaThread, Runtime::JavaHeap* javaHeap);
+        void loopJavaFrameWithHeap(Runtime::JavaThread* javaThread, Runtime::JavaHeap* javaHeap,
+                                   Runtime::ClassLoader* classLoader, Runtime::MethodArea* methodArea);
 
     };
 }

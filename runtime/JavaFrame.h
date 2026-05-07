@@ -54,6 +54,16 @@ namespace Runtime{
 
         void revertNextPc();
 
+        /** 当前正在执行指令的起始 PC（在读取操作码之前由解释器设置，用于异常表匹配）。 */
+        long getCurrentInsnBegin() const;
+
+        void setCurrentInsnBegin(long beginPc);
+
+        /** 调用本栈帧时在调用者中的 invoke 指令起始 PC（根帧为 0）。 */
+        long getInvokeSitePc() const;
+
+        void setInvokeSitePc(long sitePc);
+
     private:
         //操作数栈
         OperandStack* operandStack;
@@ -74,6 +84,10 @@ namespace Runtime{
         JavaThread* javaThread;
 
         long nextPc;
+
+        long currentInsnBegin{0};
+
+        long invokeSitePc{0};
     };
 
 }

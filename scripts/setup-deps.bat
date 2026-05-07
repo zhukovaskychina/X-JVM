@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0\.."
 
 echo ================================
 echo X-JVM Dependencies Setup Script
@@ -172,9 +173,9 @@ if not "%VCPKG_PATH%"=="" (
 
 echo.
 echo [INFO] To build the project, run:
-echo [INFO]   build.bat
+echo [INFO]   scripts\build.bat
 echo [INFO] or
-echo [INFO]   .\build.ps1
+echo [INFO]   .\scripts\build.ps1
 echo.
 
 pause 

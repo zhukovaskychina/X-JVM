@@ -49,6 +49,39 @@ namespace Instruction{
         void execute(Runtime::JavaFrame *javaFrame) override;
 
     };
+
+    class IfEq : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfNe : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfLt : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfGe : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfGt : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfLe : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfNull : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class IfNonNull : public BranchInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
 }
 
 

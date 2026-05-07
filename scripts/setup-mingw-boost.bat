@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0\.."
 
 echo ========================================
 echo X-JVM MinGW Boost Setup Script

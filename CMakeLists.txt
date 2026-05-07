@@ -200,7 +200,7 @@ else()
 请确保已安装Boost库。
 
 Windows用户请运行:
-  .\\setup-deps.bat
+  .\\scripts\\setup-deps.bat
 
 或手动使用vcpkg:
   vcpkg install boost-system boost-filesystem boost-program-options zlib --triplet x64-windows
@@ -235,14 +235,14 @@ else()
         set(USE_BUNDLED_ZLIB TRUE)
         
         # 添加内置zlib子目录
-        add_subdirectory(libs/zlib-1.2.11)
+        add_subdirectory(third_party/zlib-1.2.11)
         
         # 设置zlib目标
         set(ZLIB_TARGET zlib)
         
         # 手动设置zlib变量（兼容旧代码）
         set(ZLIB_FOUND TRUE)
-        set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/libs/zlib-1.2.11 ${CMAKE_CURRENT_BINARY_DIR}/libs/zlib-1.2.11)
+        set(ZLIB_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/third_party/zlib-1.2.11 ${CMAKE_CURRENT_BINARY_DIR}/third_party/zlib-1.2.11)
         set(ZLIB_LIBRARIES zlib)
         set(ZLIB_VERSION_STRING "1.2.11")
         
@@ -272,6 +272,8 @@ endif()
 
 # 源文件列表（分类组织）
 set(UTILS_SOURCES
+    utils/PlatformCompat.h
+    utils/PlatformCompat.cpp
     utils/StringUtils.h
     utils/StringUtils.cpp
     utils/FileUtils.h
@@ -281,10 +283,10 @@ set(UTILS_SOURCES
 )
 
 set(LIBS_SOURCES
-    libs/unzip/unzip.h
-    libs/unzip/unzip.c
-    libs/unzip/ioapi.h
-    libs/unzip/ioapi.c
+    third_party/unzip/unzip.h
+    third_party/unzip/unzip.c
+    third_party/unzip/ioapi.h
+    third_party/unzip/ioapi.c
 )
 
 set(LANG_SOURCES
@@ -413,6 +415,10 @@ set(CLASSFILE_ATTR_SOURCES
 )
 
 set(RUNTIME_SOURCES
+    runtime/threading/SafepointCoordinator.h
+    runtime/threading/SafepointCoordinator.cpp
+    runtime/threading/ObjectMonitor.h
+    runtime/threading/ObjectMonitor.cpp
     runtime/JavaFrame.cpp
     runtime/JavaFrame.h
     runtime/JavaType.cpp
@@ -439,6 +445,25 @@ set(RUNTIME_SOURCES
     runtime/HeapConstantUtils.h
     runtime/LocalVariableTables.cpp
     runtime/LocalVariableTables.h
+    runtime/native/NativeMethodRegistry.cpp
+    runtime/native/NativeMethodRegistry.h
+    runtime/native/FileNativeSupport.cpp
+    runtime/native/FileNativeSupport.h
+    runtime/native/NetworkNativeSupport.cpp
+    runtime/native/NetworkNativeSupport.h
+    runtime/native/NioChNativeSupport.cpp
+    runtime/native/NioChNativeSupport.h
+    runtime/native/UnsafeNativeSupport.cpp
+    runtime/native/UnsafeNativeSupport.h
+    runtime/ExceptionDispatch.cpp
+    runtime/ExceptionDispatch.h
+    runtime/ExceptionHelpers.cpp
+    runtime/ExceptionHelpers.h
+    runtime/synthetic/SyntheticExceptionStubs.cpp
+    runtime/synthetic/SyntheticExceptionStubs.h
+    runtime/JvmThrownObject.h
+    runtime/TypeHelper.cpp
+    runtime/TypeHelper.h
 )
 
 set(RUNTIME_HEAP_SOURCES
@@ -499,6 +524,12 @@ set(INSTRUCTIONS_SOURCES
     instructions/control/Return.h
     instructions/control/GoTo.cpp
     instructions/control/GoTo.h
+    instructions/control/AThrow.cpp
+    instructions/control/AThrow.h
+    instructions/control/Wide.cpp
+    instructions/control/Wide.h
+    instructions/control/Monitor.cpp
+    instructions/control/Monitor.h
     instructions/comparisons/Comparisons.cpp
     instructions/comparisons/Comparisons.h
     instructions/reference/NewRef.cpp
@@ -507,10 +538,18 @@ set(INSTRUCTIONS_SOURCES
     instructions/reference/PutStatic.h
     instructions/reference/GetStatic.cpp
     instructions/reference/GetStatic.h
+    instructions/reference/FieldAccess.cpp
+    instructions/reference/FieldAccess.h
     instructions/reference/InvokeStatic.cpp
     instructions/reference/InvokeStatic.h
     instructions/reference/Array.cpp
     instructions/reference/Array.h
+    instructions/reference/CheckCast.cpp
+    instructions/reference/CheckCast.h
+    instructions/reference/InstanceOf.cpp
+    instructions/reference/InstanceOf.h
+    instructions/reference/MultiANewArray.cpp
+    instructions/reference/MultiANewArray.h
     instructions/InstructionFactory.cpp
     instructions/InstructionFactory.h
 )
@@ -528,9 +567,8 @@ set(JVM_SOURCES
 # 主程序
 set(MAIN_SOURCE main.cpp)
 
-# 合并所有源文件
-set(ALL_SOURCES
-    ${MAIN_SOURCE}
+# JVM 核心（供 jvm 可执行文件与单元测试链接）
+set(XJVM_CORE_SOURCES
     ${UTILS_SOURCES}
     ${LIBS_SOURCES}
     ${LANG_SOURCES}
@@ -545,8 +583,16 @@ set(ALL_SOURCES
     ${JVM_SOURCES}
 )
 
-# 创建可执行文件
-add_executable(jvm ${ALL_SOURCES})
+add_library(xjvm_core STATIC ${XJVM_CORE_SOURCES})
+target_include_directories(xjvm_core PUBLIC ${CMAKE_SOURCE_DIR})
+set_target_properties(xjvm_core PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    POSITION_INDEPENDENT_CODE ON
+)
+
+add_executable(jvm ${MAIN_SOURCE})
 
 # 设置目标属性
 set_target_properties(jvm PROPERTIES
@@ -584,33 +630,32 @@ if(PLATFORM_LINUX)
     list(APPEND PLATFORM_LIBS dl)
 endif()
 
-# 链接库 - 修复Boost链接问题
-target_link_libraries(jvm
+# 核心库链接（测试目标通过 xjvm_core 传递依赖）
+target_link_libraries(xjvm_core PUBLIC
     ${ZLIB_TARGET}
     Threads::Threads
     ${PLATFORM_LIBS}
 )
 
-# 添加Boost库链接 - 根据发现方式选择合适的目标
 if(TARGET Boost::system AND TARGET Boost::filesystem AND TARGET Boost::program_options)
-    # 使用现代CMake目标 (vcpkg/CONFIG模式)
-    target_link_libraries(jvm
-        Boost::system
-        Boost::filesystem  
-        Boost::program_options
-    )
-    message(STATUS "Linking Boost using modern targets")
+    target_link_libraries(xjvm_core PUBLIC Boost::system Boost::filesystem)
+    target_link_libraries(jvm PRIVATE Boost::program_options)
+    message(STATUS "Linking Boost using modern targets (core: system+filesystem, jvm: program_options)")
 elseif(Boost_LIBRARIES)
-    # 使用传统变量 (MODULE模式)
-    target_link_libraries(jvm ${Boost_LIBRARIES})
+    target_link_libraries(xjvm_core PUBLIC ${Boost_LIBRARIES})
     message(STATUS "Linking Boost using legacy variables: ${Boost_LIBRARIES}")
 else()
     message(FATAL_ERROR "No valid Boost linking method found!")
 endif()
 
+target_link_libraries(jvm PRIVATE xjvm_core)
+
 # Windows下使用vcpkg时的特殊设置
 if(WIN32 AND CMAKE_TOOLCHAIN_FILE)
-    # 添加必要的编译定义以避免ABI问题
+    target_compile_definitions(xjvm_core PRIVATE
+        BOOST_ALL_DYN_LINK=1
+        BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
+    )
     target_compile_definitions(jvm PRIVATE
         BOOST_ALL_DYN_LINK=1
         BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE
@@ -619,10 +664,14 @@ endif()
 
 # 设置链接目录 (仅当使用传统Boost变量时)
 if(Boost_LIBRARY_DIRS AND NOT TARGET Boost::boost)
-    target_link_directories(jvm PRIVATE ${Boost_LIBRARY_DIRS})
+    target_link_directories(xjvm_core PUBLIC ${Boost_LIBRARY_DIRS})
 endif()
 
 # 编译定义
+target_compile_definitions(xjvm_core PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+    $<$<CONFIG:Release>:NDEBUG>
+)
 target_compile_definitions(jvm PRIVATE
     $<$<CONFIG:Debug>:DEBUG>
     $<$<CONFIG:Release>:NDEBUG>
@@ -648,9 +697,22 @@ endif()
 # 安装配置
 install(TARGETS jvm
     RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
 )
+
+# ---------------------------------------------------------------------------
+# 单元测试（GoogleTest 位于 third_party/googletest，仅 BUILD_TESTING 时构建）
+# ---------------------------------------------------------------------------
+option(XJVM_BUILD_TESTS "Build X-JVM unit tests" ON)
+include(CTest)
+if(XJVM_BUILD_TESTS AND BUILD_TESTING)
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+    if(WIN32)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    endif()
+    add_subdirectory(third_party/googletest EXCLUDE_FROM_ALL)
+    add_subdirectory(tests)
+endif()
 
 # 打包配置（可选）
 include(CPack)
@@ -677,5 +739,10 @@ if(ZLIB_FOUND)
     message(STATUS "ZLIB: System (${ZLIB_VERSION_STRING})")
 else()
     message(STATUS "ZLIB: Bundled")
+endif()
+if(XJVM_BUILD_TESTS AND BUILD_TESTING)
+    message(STATUS "Unit tests: ON (GoogleTest, run: ctest --test-dir <build>)")
+else()
+    message(STATUS "Unit tests: OFF")
 endif()
 message(STATUS "===================================")

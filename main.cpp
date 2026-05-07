@@ -1,122 +1,93 @@
-#include "utils/PlatformCompat.h"
 #include <iostream>
-#include "utils/FileUtils.h"
-#include "runtime/ThreadPool.h"
-#include "runtime/ClassLoader.h"
-#include "runtime/heap/JavaClass.h"
-#include "interpret/Interpret.h"
 #include <boost/program_options.hpp>
 
+#include "runtime/ClassLoader.h"
+#include "runtime/heap/JavaClass.h"
+#include "runtime/heap/JavaHeap.h"
+#include "interpret/Interpret.h"
+#include "utils/StringUtils.h"
 
+using boost::program_options::options_description;
+using boost::program_options::store;
+using boost::program_options::parse_command_line;
+using boost::program_options::variables_map;
+using boost::program_options::notify;
+using boost::program_options::value;
 
-using namespace std;
-using namespace boost;
-
-using namespace boost::program_options;
-std::mutex mtx;
-
-
-using namespace std;
-
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     std::cout << "=== X-JVM Starting ===" << std::endl;
-    std::cout << "argc: " << argc << std::endl;
-    for(int i = 0; i < argc; i++) {
-        std::cout << "argv[" << i << "]: " << argv[i] << std::endl;
-    }
-    std::cout.flush();
-
-    mtx.lock();
 
     try {
-        std::cout << "Parsing command line options..." << std::endl;
-        options_description desc("zhukovasky的java   \n"
-                                 "author: zhukovasky\n"
-                                 "Usage: jvm [-options]  [args...]\n"
-                                 " e.g jvm --help  \n"
-                                 "     \n");
+        options_description desc(
+            "zhukovasky的java\n"
+            "author: zhukovasky\n"
+            "Usage: jvm [-options] [args...]\n"
+            " e.g jvm --help\n");
         desc.add_options()
-                ("help", "帮助命令")
-                ("classpath",value<string>(),
-                        "jvm --classpath xxx; \n")
-                ("xjre",value<string>(),"xjrehome")
-                ("javaclass",value<string>(),"")
-                ;
+            ("help", "帮助命令")
+            ("classpath", value<std::string>(), "类路径，例如 jvm --classpath .")
+            ("xjre", value<std::string>(), "JRE 根目录")
+            ("javaclass", value<std::string>(), "主类 .class 文件名");
+
         variables_map vm;
         store(parse_command_line(argc, argv, desc), vm);
         notify(vm);
 
-        std::cout << "Command line parsed successfully" << std::endl;
-
         if (vm.count("help")) {
-            cout << desc << "\n";
+            std::cout << desc << "\n";
+            return 0;
+        }
+
+        std::string classpath;
+        std::string xjre;
+        std::string javaClassName;
+        if (vm.count("classpath")) {
+            classpath = vm["classpath"].as<std::string>();
+        }
+        if (vm.count("javaclass")) {
+            javaClassName = vm["javaclass"].as<std::string>();
+        }
+        if (vm.count("xjre")) {
+            xjre = vm["xjre"].as<std::string>();
+        } else {
+            std::cout << desc << std::endl;
+            return 0;
+        }
+
+        auto* classPath = new Runtime::ClassPath();
+        classPath->parseBootAndExtClassPath(xjre);
+        classPath->parseUserClassPath(classpath);
+        auto* classLoader = new Runtime::ClassLoader(classPath);
+
+        if (!Utils::StringUtils::endsWith(javaClassName, ".class")) {
+            std::cerr << "java虚拟机加载文件出错" << std::endl;
+            delete classLoader;
+            delete classPath;
             return 1;
         }
-        std::string classpath="";
-        std::string xjre="";
-        std::string javaClassName="";
-        if (vm.count("classpath")) {
-            classpath=vm["classpath"].as<string>();
-        }
-        if(vm.count("javaclass")){
-            javaClassName=vm["javaclass"].as<string>();
-        }
-        if(vm.count("xjre")){
-            xjre=vm["xjre"].as<string>();
-        }
-        else{
-            cout<< desc <<endl;
-            exit(0);
-        }
-     //   cout<<classpath<<endl;
-     //   cout<<javaClassName<<endl;
-      //  exit(0);
-//      Runtime::JavaRuntimeEnv javaRuntimeEnv;
-//        javaRuntimeEnv.initRuntime();
-        Runtime::ThreadPool threadPool;
-        threadPool.start(1);
-        std::future<void> result= threadPool.submit([=]() -> void{
-         //   cout<<"hello"<<endl;
-            Runtime::ClassPath *classPath=new Runtime::ClassPath();
-            classPath->parseBootAndExtClassPath(xjre);
-            classPath->parseUserClassPath(classpath);
-            Runtime::ClassLoader *classLoader=new Runtime::ClassLoader(classPath);
-            //
-            if(!Utils::StringUtils::endsWith(javaClassName,".class")){
-                cerr<<"java虚拟机加载文件出错"<<endl;
-                exit(0);
-            }
 
-            std::string javaName=Utils::StringUtils::replaceAll(Utils::StringUtils::replaceAll(javaClassName, ".", "/"),"/class",".class");
-            Runtime::JavaClass* javaClass=classLoader->loadClass(javaName);
-            Runtime::Heap::Method *mainMethod=javaClass->getMainMethod();
-            if(mainMethod== nullptr){
-                cerr<<"java虚拟机找不到主方法"<<endl;
-                exit(0);
-            }
-            Interpret::Interpret *interpret = new Interpret::Interpret();
-            interpret->execByteCode(mainMethod);
-            delete interpret;
-            //执行引擎执行java
-        });
-        result.share().get();
-        result.get();
+        std::string javaName = Utils::StringUtils::replaceAll(
+            Utils::StringUtils::replaceAll(javaClassName, ".", "/"), "/class", ".class");
+        Runtime::JavaClass* javaClass = classLoader->loadClass(javaName);
+        Runtime::Heap::Method* mainMethod = javaClass->getMainMethod();
+        if (mainMethod == nullptr) {
+            std::cerr << "java虚拟机找不到主方法" << std::endl;
+            delete classLoader;
+            delete classPath;
+            return 1;
+        }
 
-//        std::vector<std::thread> threadVector=threadPool.threads;
+        Runtime::JavaHeap javaHeap;
+        Interpret::Interpret interpret;
+        interpret.execByteCode(mainMethod, &javaHeap, classLoader);
 
-     //   std::vector<std::thread>::iterator threadIterator;
-      //  for (threadIterator=threadVector.begin(); threadIterator!=threadVector.end() ; ++threadIterator) {
-   //         threadIterator.operator*();
-      //  }
-
-        threadPool.workQueue;
-        mtx.unlock();
-    }catch (std::exception& e){
-        std::cout<<e.what()<<std::endl;
+        delete classLoader;
+        delete classPath;
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
     }
-
-
 
     return 0;
 }

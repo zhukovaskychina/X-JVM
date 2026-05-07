@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0\.."
 
 echo ================================
 echo X-JVM CLion 快速配置脚本
@@ -15,7 +16,7 @@ if %errorlevel% == 0 (
 
 REM 检查vcpkg是否存在
 if not exist "C:\vcpkg\vcpkg.exe" (
-    echo [错误] 未找到 vcpkg，请先运行 setup-deps.bat
+    echo [错误] 未找到 vcpkg，请先运行 scripts\setup-deps.bat
     pause
     exit /b 1
 )

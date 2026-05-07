@@ -133,10 +133,11 @@ string new_str                //替换子串
             }
             return result;
         }
-        static inline std::string LastIndexOf(const std::string& str,std::string index)
+        static inline std::string LastIndexOf(const std::string& str, std::string index)
         {
-
-
+            (void)str;
+            (void)index;
+            return "";
         }
 
     };

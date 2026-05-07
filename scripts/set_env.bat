@@ -1,4 +1,5 @@
-@echo off 
+@echo off
+cd /d "%~dp0\.."
 set VCPKG_ROOT=C:\vcpkg 
 set CMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake 
 set VCPKG_TARGET_TRIPLET=x64-windows 

@@ -37,3 +37,6 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest -C ${{env.BUILD_TYPE}}
 
+    # 可选：ASan/UBSan 需在镜像安装依赖后单独 matrix job，例如：
+    # cmake -B build -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" ...
+

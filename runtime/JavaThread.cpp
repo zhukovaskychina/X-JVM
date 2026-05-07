@@ -57,6 +57,7 @@ namespace Runtime{
        // Runtime::JavaFrame *javaFrame=new Runtime::JavaFrame();
         jthread->setJavaStack(runtimeStack);
        // jthread->setJavaFrame(javaFrame);
+        jthread->setThreadState(JavaThreadState::Runnable);
 
         return jthread;
     }
@@ -73,7 +74,27 @@ namespace Runtime{
         return this->javaStack->top();
     }
 
-    JavaThread::JavaThread() {
+    JavaThread::JavaThread() : stackSize(0), pcAddress(0), javaStack(nullptr), javaFrame(nullptr),
+                               javaHeap(nullptr), jEnv(nullptr), threadState_(JavaThreadState::New) {
+    }
 
+    JavaHeap *JavaThread::getJavaHeap() const {
+        return javaHeap;
+    }
+
+    void JavaThread::setJavaHeap(JavaHeap *heap) {
+        javaHeap = heap;
+    }
+
+    void JavaThread::interrupt() {
+        interrupted_.store(true, std::memory_order_release);
+    }
+
+    bool JavaThread::isInterrupted(bool clear) {
+        const bool v = interrupted_.load(std::memory_order_acquire);
+        if (v && clear) {
+            interrupted_.store(false, std::memory_order_release);
+        }
+        return v;
     }
 }

@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0\.."
 
 echo ================================
 echo X-JVM Windows Build Script
@@ -36,7 +37,7 @@ if "%~1"=="--clean" (
     goto :parse_args
 )
 if "%~1"=="--help" (
-    echo Usage: build.bat [options]
+    echo Usage: scripts\build.bat [options]
     echo Options:
     echo   --debug    Build in Debug mode (default: Release)
     echo   --clean    Clean build directory before building
@@ -94,7 +95,7 @@ if %errorlevel% neq 0 (
     echo [SOLUTION] This is likely due to missing Boost libraries. Try these solutions:
     echo.
     echo 1. Install dependencies using vcpkg:
-    echo    setup-deps.bat
+    echo    scripts\setup-deps.bat
     echo.
     echo 2. Or manually install vcpkg and dependencies:
     echo    git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
@@ -104,7 +105,7 @@ if %errorlevel% neq 0 (
     echo.
     echo 3. Or set BOOST_ROOT to your Boost installation:
     echo    set BOOST_ROOT=C:\path\to\boost
-    echo    build.bat
+    echo    scripts\build.bat
     echo.
     echo 4. For MinGW users, install Boost via MSYS2:
     echo    pacman -S mingw-w64-x86_64-boost mingw-w64-x86_64-zlib

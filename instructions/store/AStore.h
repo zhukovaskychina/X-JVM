@@ -10,8 +10,7 @@
 namespace Instruction{
     class AAStore:public Instruction::NoOperationInstruction{
     public:
-
-
+        void execute(Runtime::JavaFrame *javaFrame) override;
     };
     class BAStore:public Instruction::NoOperationInstruction{
     public:

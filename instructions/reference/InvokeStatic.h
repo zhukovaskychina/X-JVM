@@ -21,14 +21,20 @@ namespace Instruction{
 
     };
 
-    class InvokeInterface:public Instruction::Instructions{
+    /** invokespecial：解析态方法 + 构造器 + 超类调用，不做虚分派。 */
+    class InvokeSpecial : public Instruction::Index16Instruction {
+    public:
+        void execute(Runtime::JavaFrame *javaFrame) override;
+    };
+
+    class InvokeInterface:public Instruction::Index16Instruction{
     public:
         void execute(Runtime::JavaFrame *javaFrame) override;
 
         void fetchOperands(Instruction::ByteCodeReader *byteCodeReader) override;
 
     private:
-
+        u1 count_{0};
     };
 
 }

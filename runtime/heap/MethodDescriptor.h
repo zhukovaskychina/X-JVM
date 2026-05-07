@@ -7,6 +7,8 @@
 
 #include <list>
 #include <iostream>
+#include <string>
+#include <vector>
 #include "../../common/Internal.h"
 
 using namespace std;
@@ -43,10 +45,12 @@ namespace Runtime{
         private:
             std::string raw;
 
-            char* charArrays;
+            std::vector<char> storage_;
+            char* charArrays{nullptr};
 
-            int offset;
-            MethodDescriptor* methodDescriptor;
+            int offset{0};
+            MethodDescriptor* methodDescriptor{nullptr};
+            bool ok_{true};
 
             void startParams();
 
@@ -61,8 +65,6 @@ namespace Runtime{
             void finish();
 
             u1 readU1();
-
-            char* readRest();
 
             void unreadU1();
 

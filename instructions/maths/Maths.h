@@ -141,7 +141,7 @@ namespace Instruction{
         void execute(Runtime::JavaFrame *javaFrame) override;
 
     };
-    ;;;;;
+
     class LXor:public NoOperationInstruction{
     public:
         void execute(Runtime::JavaFrame *javaFrame) override;
@@ -201,8 +201,8 @@ namespace Instruction{
         void execute(Runtime::JavaFrame *javaFrame) override;
 
     private:
-        int index;
-        int constants;
+        int index{0};
+        int constants{0};
     };
 }
 

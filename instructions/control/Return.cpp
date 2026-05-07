@@ -3,8 +3,30 @@
 //
 
 #include "Return.h"
+
+#include "../../runtime/heap/JavaClass.h"
+
+namespace {
+
+void markClinitCompletedIfLeaving(Runtime::JavaFrame* frame) {
+    if (!frame || !frame->getMethod()) {
+        return;
+    }
+    Runtime::Heap::Method* m = frame->getMethod();
+    if (m->getName() != "<clinit>") {
+        return;
+    }
+    Runtime::JavaClass* jc = m->getJavaClass();
+    if (jc) {
+        jc->markInitCompleted();
+    }
+}
+
+} // namespace
+
 namespace Instruction{
     void ReturnInst::execute(Runtime::JavaFrame *javaFrame) {
+        markClinitCompletedIfLeaving(javaFrame);
         javaFrame->getJavaThread()->popJavaFrame();
     }
 
@@ -19,6 +41,7 @@ namespace Instruction{
 
     void IReturn::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaThread *jthread=javaFrame->getJavaThread();
+        markClinitCompletedIfLeaving(javaFrame);
         Runtime::JavaFrame* currentJavaFrame=jthread->popJavaFrame();
         Runtime::JavaFrame* invokeFrame=jthread->currentFrame();
         int value=currentJavaFrame->getOperandStack()->popInt();
@@ -27,6 +50,7 @@ namespace Instruction{
 
     void FReturn::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaThread *jthread=javaFrame->getJavaThread();
+        markClinitCompletedIfLeaving(javaFrame);
         Runtime::JavaFrame* currentJavaFrame=jthread->popJavaFrame();
         Runtime::JavaFrame* invokeFrame=jthread->currentFrame();
         float value=currentJavaFrame->getOperandStack()->popFloat();
@@ -35,6 +59,7 @@ namespace Instruction{
 
     void DReturn::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaThread *jthread=javaFrame->getJavaThread();
+        markClinitCompletedIfLeaving(javaFrame);
         Runtime::JavaFrame* currentJavaFrame=jthread->popJavaFrame();
         Runtime::JavaFrame* invokeFrame=jthread->currentFrame();
         double value=currentJavaFrame->getOperandStack()->popDouble();
@@ -43,6 +68,7 @@ namespace Instruction{
 
     void AReturn::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaThread *jthread=javaFrame->getJavaThread();
+        markClinitCompletedIfLeaving(javaFrame);
         Runtime::JavaFrame* currentJavaFrame=jthread->popJavaFrame();
         Runtime::JavaFrame* invokeFrame=jthread->currentFrame();
         Runtime::Object* value=currentJavaFrame->getOperandStack()->popObject();
@@ -51,6 +77,7 @@ namespace Instruction{
 
     void LReturn::execute(Runtime::JavaFrame *javaFrame) {
         Runtime::JavaThread *jthread=javaFrame->getJavaThread();
+        markClinitCompletedIfLeaving(javaFrame);
         Runtime::JavaFrame* currentJavaFrame=jthread->popJavaFrame();
         Runtime::JavaFrame* invokeFrame=jthread->currentFrame();
         long value=currentJavaFrame->getOperandStack()->popLong();

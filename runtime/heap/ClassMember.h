@@ -6,6 +6,7 @@
 #define JVM_CLASSMEMBER_H
 
 #include <list>
+#include <vector>
 #include "../../common/Internal.h"
 
 #include "../../classfile/ConstantPools.h"
@@ -112,6 +113,15 @@ namespace Runtime{
             int constantValueIndex;
             int slotId;
         };
+
+        /** Code 属性的 exception_table 一项（运行时分派用）。 */
+        struct ExceptionHandlerEntry {
+            u2 start_pc;
+            u2 end_pc;
+            u2 handler_pc;
+            u2 catch_type;
+        };
+
         //方法信息
         class Method:public ClassMember{
         public:
@@ -179,11 +189,18 @@ namespace Runtime{
 
             bool isEnum() override;
 
+            const std::vector<ExceptionHandlerEntry> &getExceptionHandlers() const;
+
+            void clearExceptionHandlers();
+
+            void addExceptionHandler(ExceptionHandlerEntry entry);
+
         private:
             u1 maxStack;
             u1 maxLocal;
             u1* code;
             int argsCount; //参数
+            std::vector<ExceptionHandlerEntry> exceptionHandlers_;
         };
 
         class RuntimeConstantsPool{

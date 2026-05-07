@@ -46,7 +46,16 @@ namespace Runtime {
 
         void prepare(JavaClass *javaClass);
 
-
+        /** 枚举方法区 `classTable` 中已加载类（如 GC 扫描静态槽，与 ClassLoader 路径互补）。 */
+        template<typename Fn>
+        void forEachLoadedClass(Fn&& fn) const {
+            for (const auto& kv : classTable) {
+                JavaClass* jc = kv.second;
+                if (jc) {
+                    fn(jc);
+                }
+            }
+        }
 
     private:
         Runtime::ClassLoader *systemClassLoader;

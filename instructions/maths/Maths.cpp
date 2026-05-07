@@ -7,10 +7,13 @@
 #include "../../utils/PlatformCompat.h"
 namespace Instruction{
     void IRem::execute(Runtime::JavaFrame *javaFrame) {
-        int first=javaFrame->getOperandStack()->popInt();
-        int second=javaFrame->getOperandStack()->popInt();
-        int result=first%second;
-        javaFrame->getOperandStack()->pushInt(result);
+        const int v2 = javaFrame->getOperandStack()->popInt();
+        const int v1 = javaFrame->getOperandStack()->popInt();
+        if (v2 == 0) {
+            javaFrame->getOperandStack()->pushInt(0);
+            return;
+        }
+        javaFrame->getOperandStack()->pushInt(v1 % v2);
     }
     void LRem::execute(Runtime::JavaFrame *javaFrame) {
         long first=javaFrame->getOperandStack()->popLong();
@@ -33,10 +36,13 @@ namespace Instruction{
     }
 
     void IDiv::execute(Runtime::JavaFrame *javaFrame) {
-        int first=javaFrame->getOperandStack()->popInt();
-        int second=javaFrame->getOperandStack()->popInt();
-        int result=first/second;
-        javaFrame->getOperandStack()->pushInt(result);
+        const int v2 = javaFrame->getOperandStack()->popInt();
+        const int v1 = javaFrame->getOperandStack()->popInt();
+        if (v2 == 0) {
+            javaFrame->getOperandStack()->pushInt(0);
+            return;
+        }
+        javaFrame->getOperandStack()->pushInt(v1 / v2);
     }
     void FDiv::execute(Runtime::JavaFrame *javaFrame) {
         float first=javaFrame->getOperandStack()->popFloat();
@@ -70,10 +76,9 @@ namespace Instruction{
         javaFrame->getOperandStack()->pushDouble(result);
     }
     void IAdd::execute(Runtime::JavaFrame *javaFrame) {
-        int first=javaFrame->getOperandStack()->popInt();
-        int second=javaFrame->getOperandStack()->popInt();
-        int result=first+second;
-        javaFrame->getOperandStack()->pushFloat(result);
+        const int v2 = javaFrame->getOperandStack()->popInt();
+        const int v1 = javaFrame->getOperandStack()->popInt();
+        javaFrame->getOperandStack()->pushInt(v1 + v2);
     }
     void LAdd::execute(Runtime::JavaFrame *javaFrame) {
         long first=javaFrame->getOperandStack()->popLong();
@@ -83,11 +88,10 @@ namespace Instruction{
     }
 
     void ISub::execute(Runtime::JavaFrame *javaFrame) {
-        int first=javaFrame->getOperandStack()->popInt();
-        int second=javaFrame->getOperandStack()->popInt();
-        int result=first-second;
-        javaFrame->getOperandStack()->pushFloat(result);
-    };
+        const int v2 = javaFrame->getOperandStack()->popInt();
+        const int v1 = javaFrame->getOperandStack()->popInt();
+        javaFrame->getOperandStack()->pushInt(v1 - v2);
+    }
     void FSub::execute(Runtime::JavaFrame *javaFrame) {
         float first=javaFrame->getOperandStack()->popFloat();
         float second=javaFrame->getOperandStack()->popFloat();
@@ -108,10 +112,9 @@ namespace Instruction{
     }
 
     void IMul::execute(Runtime::JavaFrame *javaFrame) {
-        int first=javaFrame->getOperandStack()->popInt();
-        int second=javaFrame->getOperandStack()->popInt();
-        int result=first*second;
-        javaFrame->getOperandStack()->pushFloat(result);
+        const int v2 = javaFrame->getOperandStack()->popInt();
+        const int v1 = javaFrame->getOperandStack()->popInt();
+        javaFrame->getOperandStack()->pushInt(v1 * v2);
     }
     void FMul::execute(Runtime::JavaFrame *javaFrame) {
         float first=javaFrame->getOperandStack()->popFloat();
@@ -213,7 +216,8 @@ namespace Instruction{
 
     void IInc::fetchOperands(Instruction::ByteCodeReader *byteCodeReader) {
         this->index=byteCodeReader->readU1();
-        this->constants=byteCodeReader->readU1();
+        const u1 raw = byteCodeReader->readU1();
+        this->constants = static_cast<int>(static_cast<int8_t>(raw));
     }
 
     void IInc::execute(Runtime::JavaFrame *javaFrame) {

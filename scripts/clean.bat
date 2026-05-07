@@ -1,5 +1,6 @@
 @echo off
 setlocal
+cd /d "%~dp0\.."
 
 echo ================================
 echo X-JVM Clean Script
@@ -66,7 +67,7 @@ if exist "*.log" (
 
 echo.
 echo [SUCCESS] Project cleaned successfully!
-echo [INFO] You can now run build.bat or build.ps1 to rebuild the project.
+echo [INFO] You can now run scripts\build.bat or scripts\build.ps1 to rebuild the project.
 echo.
 
 pause 

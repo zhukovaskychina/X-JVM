@@ -28,6 +28,9 @@ namespace Runtime{
 
         int getArrayLength();
 
+        /** 原始数组长度（`createArray`）；非数组为 -1。 */
+        void setArrayLength(int n);
+
         const std::string &getObjectType() const;
 
         void setObjectType(const std::string &objectType);
@@ -38,6 +41,18 @@ namespace Runtime{
 
         void setData(void *data);
 
+        /** GC tri-color / mark-sweep: mark bit for reachability. */
+        bool isGcMarked() const;
+        void setGcMarked(bool marked);
+        void clearGcMark();
+
+        /** 数组与元素区由 JavaClass::createArray 单次 malloc，由 Object::deleteInstance 释放。 */
+        bool isArrayCoallocated() const;
+        void setArrayCoallocated(bool v);
+
+        /** 替代 delete：支持数组共分配块。普通对象等价于 delete。 */
+        static void deleteInstance(Object* o);
+
     private:
         Slots* fields;
         JavaClass *javaClass;
@@ -46,6 +61,9 @@ namespace Runtime{
         void* data;
         int age;
         long address;
+        bool gcMarked_{false};
+        int arrayLength_{-1};
+        bool arrayCoallocated_{false};
     };
 }
 

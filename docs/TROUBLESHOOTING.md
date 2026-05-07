@@ -17,12 +17,12 @@ Could NOT find Boost (missing: Boost_INCLUDE_DIR system filesystem program_optio
 
 **方案1: 使用自动化脚本** ⭐推荐
 ```cmd
-setup-deps.bat
+scripts\setup-deps.bat
 ```
 
 **方案2: 使用PowerShell自动安装**
 ```powershell
-.\build.ps1 -InstallDeps
+.\scripts\build.ps1 -InstallDeps
 ```
 
 **方案3: 手动安装vcpkg**
@@ -37,7 +37,7 @@ vcpkg integrate install
 **方案4: 设置BOOST_ROOT环境变量**
 ```cmd
 set BOOST_ROOT=C:\path\to\boost
-build.bat
+scripts\build.bat
 ```
 
 **方案5: MinGW用户使用MSYS2**
@@ -207,12 +207,12 @@ dir build /s /b | findstr jvm   # Windows
 
 **错误信息**:
 ```
-Permission denied: ./build.sh
+Permission denied: ./scripts/build.sh
 ```
 
 **解决方案**:
 ```bash
-chmod +x build.sh
+chmod +x scripts/build.sh
 chmod +x run-example.sh  # 如果存在
 ```
 
@@ -276,26 +276,26 @@ ls /Library/Java/JavaVirtualMachines/
 
 **Windows**:
 ```cmd
-build.bat         # 基本输出
-.\build.ps1 -Verbose  # 详细输出
+scripts\build.bat         # 基本输出
+.\scripts\build.ps1 -Verbose  # 详细输出
 ```
 
 **Linux/macOS**:
 ```bash
-./build.sh -v     # 详细输出
+./scripts/build.sh -v     # 详细输出
 ```
 
 ### 2. Debug构建
 
 **Windows**:
 ```cmd
-build.bat --debug
-.\build.ps1 -BuildType Debug
+scripts\build.bat --debug
+.\scripts\build.ps1 -BuildType Debug
 ```
 
 **Linux/macOS**:
 ```bash
-./build.sh -t Debug
+./scripts/build.sh -t Debug
 ```
 
 ### 3. 清理构建
@@ -303,13 +303,13 @@ build.bat --debug
 **Windows**:
 ```cmd
 clean.bat
-build.bat --clean
-.\build.ps1 -Clean
+scripts\build.bat --clean
+.\scripts\build.ps1 -Clean
 ```
 
 **Linux/macOS**:
 ```bash
-./build.sh -c
+./scripts/build.sh -c
 # 或手动清理
 rm -rf build
 ```
@@ -320,9 +320,9 @@ rm -rf build
 
 ```bash
 # 构建脚本帮助
-build.bat --help              # Windows
-.\build.ps1 -Help             # Windows PowerShell
-./build.sh -h                 # Linux/macOS
+scripts\build.bat --help              # Windows
+.\scripts\build.ps1 -Help             # Windows PowerShell
+./scripts/build.sh -h                 # Linux/macOS
 
 # JVM程序帮助
 ./jvm --help                  # 运行时帮助
@@ -375,4 +375,4 @@ echo $DYLD_LIBRARY_PATH  # macOS
 
 ---
 
-**提示**: 大多数问题都是由于缺少依赖库造成的。推荐首先运行 `setup-deps.bat` (Windows) 或 `./build.sh -i` (Linux/macOS) 来自动安装依赖。 
+**提示**: 大多数问题都是由于缺少依赖库造成的。推荐首先运行 `scripts\setup-deps.bat` (Windows)；Linux/macOS 请先按 README 安装 Boost/zlib，再执行 `./scripts/build.sh`。 

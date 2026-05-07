@@ -2,7 +2,7 @@
 // Created by zhukovasky on 2020/8/7.
 //
 
-#include <malloc.h>
+#include <cstdlib>
 #include "StackMapFrame.h"
 
 namespace ClassFile{

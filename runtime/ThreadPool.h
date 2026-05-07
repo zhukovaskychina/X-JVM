@@ -12,106 +12,61 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
-#include <functional>
 #include <future>
 #include <deque>
+#include <type_traits>
+#include <utility>
 
 using namespace std;
 namespace Runtime{
+
+    /** 可执行工作单元，避免 std::function 在部分链接场景下的 libc++ 符号问题 */
+    class Runnable {
+    public:
+        virtual ~Runnable() = default;
+        virtual void run() = 0;
+    };
+
+    template <typename F>
+    class RunnableLambda final : public Runnable {
+    public:
+        explicit RunnableLambda(F fn) : fn_(std::move(fn)) {}
+
+        void run() override { fn_(); }
+
+    private:
+        F fn_;
+    };
+
     class ThreadPool {
     public:
-        void start(unsigned int numberOfThreads) {
-            for(unsigned int i{0}; i < numberOfThreads; i++) {
-                threads.push_back(std::thread(&ThreadPool::worker, this));
-            }
-        }
+        void start(unsigned int numberOfThreads);
 
-        void worker() {
-            while (!done) {
-                std::function<void()> work;
-                {
-                    std::unique_lock<std::mutex> ul(m);
-                    cv.wait(ul,[&] { return ( hasWork() || done );});
-                    work = pull();
-                }
+        void worker();
 
-                if(done) break;
-                work();
-            }
-        }
-
-        void add(std::function<void()> work) {
+        template <typename F>
+        void add(F&& f) {
+            using D = typename std::decay<F>::type;
             {
                 std::lock_guard<std::mutex> guard(m);
-                workQueue.push_front(work);
+                workQueue.push_front(
+                    std::unique_ptr<Runnable>(new RunnableLambda<D>(std::forward<F>(f))));
             }
             cv.notify_one();
         }
 
-        template<class F, class... Args>
-        auto submit(F&& task_function, Args&&... args)
-        {
-            using T = decltype(task_function(args...));
+        bool hasWork();
 
-            auto task = std::make_shared<std::packaged_task<T()>> (
-                    std::bind(std::forward<F>(task_function), std::forward<Args>(args)...)
-            );
+        std::unique_ptr<Runnable> pull();
 
-            std::future<T> result = task->get_future();
-            auto work = [task] () { (*task)(); };
+        virtual ~ThreadPool();
 
-            {
-                std::lock_guard<std::mutex> guard(m);
-                workQueue.push_front(work);
-            }
+        virtual void finalize();
 
-            cv.notify_one();
+        virtual void runPendingWork();
 
-            return result;
-        }
-
-        bool hasWork() {
-            return !workQueue.empty();
-        }
-
-        std::function<void()> pull() {
-            if(workQueue.empty()) {
-                return []{};
-            }
-
-            auto work = workQueue.back();
-            workQueue.pop_back();
-            return work;
-        }
-
-        ~ThreadPool() {
-            done = true;
-            cv.notify_all();
-            for(auto& t:threads) {
-                t.join();
-            }
-        }
-        virtual void finalize(){
-            this->done=true;
-        };
-
-        virtual void runPendingWork(){
-            while (!done){
-                m.lock();
-                if(!workQueue.empty()){
-                   auto task=std::move( workQueue.front());
-                   workQueue.pop_front();
-                   m.unlock();
-                   task();
-                }else{
-                    m.unlock();
-                    std::this_thread::yield();
-                }
-
-            }
-        };
         std::vector<std::thread> threads;
-        std::deque<std::function<void()>> workQueue;
+        std::deque<std::unique_ptr<Runnable>> workQueue;
         std::atomic<bool> done {false};
         std::mutex m;
         std::condition_variable cv;

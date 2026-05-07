@@ -20,6 +20,18 @@ namespace Instruction{
         u1 atype;
         Runtime::JavaClass* getPrimitiveArrayClass(Runtime::ClassLoader* classLoader,u1 atype);
     };
+
+    /** anewarray：引用或数组成分的一维数组。 */
+    class ANewArray : public Index16Instruction {
+    public:
+        void execute(Runtime::JavaFrame *javaFrame) override;
+    };
+
+    /** arraylength（0xbe） */
+    class ArrayLength : public NoOperationInstruction {
+    public:
+        void execute(Runtime::JavaFrame *javaFrame) override;
+    };
 }
 
 #endif //JVM_ARRAY_H

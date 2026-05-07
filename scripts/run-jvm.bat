@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0\.."
 echo ===== X-JVM 运行脚本 =====
 echo.
 
@@ -9,7 +10,7 @@ set PATH=C:\ProgramData\mingw64\mingw64\bin;%PATH%
 REM 检查可执行文件是否存在
 if not exist "build\jvm.exe" (
     echo 错误: build\jvm.exe 不存在
-    echo 请先运行 build.bat 编译项目
+    echo 请先运行 scripts\build.bat 编译项目
     pause
     exit /b 1
 )

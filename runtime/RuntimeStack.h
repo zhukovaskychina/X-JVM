@@ -7,6 +7,8 @@
 
 
 #include "JavaFrame.h"
+#include <utility>
+#include <vector>
 
 namespace Runtime{
     class JavaFrame;
@@ -27,6 +29,24 @@ namespace Runtime{
         int getStackSize();
 
         void clear();
+
+        /** Visit each frame from bottom to top without permanently altering the stack. */
+        template <typename Fn>
+        void forEachFrame(Fn&& fn) {
+            std::vector<JavaFrame*> tmp;
+            while (!this->innerStack.empty()) {
+                tmp.push_back(this->innerStack.top());
+                this->innerStack.pop();
+            }
+            for (auto it = tmp.rbegin(); it != tmp.rend(); ++it) {
+                this->innerStack.push(*it);
+            }
+            for (JavaFrame* f : tmp) {
+                if (f) {
+                    fn(f);
+                }
+            }
+        }
 
 
     private:

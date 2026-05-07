@@ -37,6 +37,23 @@ namespace Instruction{
         void execute(Runtime::JavaFrame *javaFrame) override;
     };
 
+    class ILoad4 : public NoOperationInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class ILoad5 : public NoOperationInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class ILoad6 : public NoOperationInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+    class ILoad7 : public NoOperationInstruction {
+    public:
+        void execute(Runtime::JavaFrame* javaFrame) override;
+    };
+
     class LLoad:public Index8Instruction{
     public:
         void execute(Runtime::JavaFrame *javaFrame) override;

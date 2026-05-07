@@ -17,15 +17,17 @@
 #include "../JavaThread.h"
 
 namespace Runtime{
-    class Heap::RuntimeConstantsPool;
     class ClassLoader;
-    class Heap::FieldInfo;
-    class Method;
     class Slots;
     class FieldRef;
     class classRef;
     class MethodRef;
     class SymRef;
+    namespace Heap {
+        class RuntimeConstantsPool;
+        class FieldInfo;
+        class Method;
+    }
 
     class JavaClass {
     public:
@@ -48,6 +50,12 @@ namespace Runtime{
         bool isEnum();
 
         bool isArray();
+
+        /** 原始类型一维数组（`[I` 等）；`[[I`、`[Ljava/lang/String;` 等为 false。 */
+        bool isPrimitiveArray() const;
+
+        /** 类文件 access_flags 原值（用于 Class.getModifiers 等 native 近似实现）。 */
+        u2 getClassAccessFlags() const;
 
         Object* createArray(int length);
 
@@ -117,7 +125,12 @@ namespace Runtime{
 
         bool initStarted();
 
+        /** `<clinit>` 已正常跑完（或该类无 `<clinit>` 且已完成初始化登记）。 */
+        bool initCompleted() const;
+
         void startInit();
+
+        void markInitCompleted();
 
         void initJavaClass(JavaThread* javaThread,JavaClass* javaClass);
 
@@ -175,7 +188,8 @@ namespace Runtime{
         ClassFile::Code_attribute* getCodeAttrs(const ClassFile::MethodInfo *clsMethod) const;
 
         ClassFile::ConstantValue* getConstantValueAttribute(const ClassFile::FieldInfo *fieldInfo) const;
-        bool initClassStarted;
+        bool initClassStarted{false};
+        bool initClassCompleted{false};
     };
 }
 

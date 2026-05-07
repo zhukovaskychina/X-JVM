@@ -8,10 +8,13 @@ param(
     [switch]$Verbose
 )
 
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+Set-Location $RepoRoot
+
 # 显示帮助信息
 if ($Help) {
     Write-Host "X-JVM Windows Build Script" -ForegroundColor Green
-    Write-Host "Usage: .\build.ps1 [options]" -ForegroundColor Yellow
+    Write-Host "Usage: .\scripts\build.ps1 [options]" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Options:" -ForegroundColor Cyan
     Write-Host "  -BuildType <type>    Build type: Release, Debug, RelWithDebInfo, MinSizeRel (default: Release)"
@@ -22,11 +25,11 @@ if ($Help) {
     Write-Host "  -Help                Show this help message"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Magenta
-    Write-Host "  .\build.ps1                                    # Release build"
-    Write-Host "  .\build.ps1 -BuildType Debug                   # Debug build"
-    Write-Host "  .\build.ps1 -Clean -BuildType Release          # Clean and build"
-    Write-Host "  .\build.ps1 -InstallDeps                       # Install dependencies first"
-    Write-Host "  .\build.ps1 -Generator 'MinGW Makefiles'       # Use MinGW"
+    Write-Host "  .\scripts\build.ps1                            # Release build"
+    Write-Host "  .\scripts\build.ps1 -BuildType Debug           # Debug build"
+    Write-Host "  .\scripts\build.ps1 -Clean -BuildType Release  # Clean and build"
+    Write-Host "  .\scripts\build.ps1 -InstallDeps               # Install dependencies first"
+    Write-Host "  .\scripts\build.ps1 -Generator 'MinGW Makefiles' # Use MinGW"
     exit 0
 }
 
@@ -179,10 +182,10 @@ try {
     Write-Host "[SOLUTION] This is likely due to missing Boost libraries. Try these solutions:" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "1. Install dependencies automatically:" -ForegroundColor Cyan
-    Write-Host "   .\build.ps1 -InstallDeps" -ForegroundColor White
+    Write-Host "   .\scripts\build.ps1 -InstallDeps" -ForegroundColor White
     Write-Host ""
     Write-Host "2. Or run dependency setup script:" -ForegroundColor Cyan
-    Write-Host "   setup-deps.bat" -ForegroundColor White
+    Write-Host "   scripts\setup-deps.bat" -ForegroundColor White
     Write-Host ""
     Write-Host "3. Or manually install vcpkg and dependencies:" -ForegroundColor Cyan
     Write-Host "   git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg" -ForegroundColor White

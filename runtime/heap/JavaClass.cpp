@@ -15,12 +15,48 @@
 #include "../../classfile/Constant_Integer_info.h"
 #include "../../classfile/Constant_Float_info.h"
 #include "../../classfile/attributeInfo/Code_attribute.h"
+#include "../../classfile/attributeInfo/Exception_table.h"
 #include "../../utils/StringUtils.h"
 #include "../HeapConstantUtils.h"
+#include "../detail/ArrayCoallocLayout.h"
 #include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 #include "../../utils/PlatformCompat.h"
 
 namespace Runtime{
+
+namespace {
+
+size_t primitiveArrayElemBytes(const std::string& n) {
+    if (n.size() < 2 || n[0] != '[') {
+        return 0;
+    }
+    const char t = n[1];
+    if (t == 'L' || t == '[') {
+        return 0;
+    }
+    switch (t) {
+    case 'Z':
+    case 'B':
+        return 1;
+    case 'S':
+    case 'C':
+        return 2;
+    case 'I':
+    case 'F':
+        return 4;
+    case 'J':
+    case 'D':
+        return 8;
+    default:
+        return 0;
+    }
+}
+
+} // namespace
     JavaClass::JavaClass(ClassFile::ClassFile *classFile) : classFile(classFile) {
         this->classFile=classFile;
         this->constantPoolsList=classFile->getConstantPools();
@@ -80,6 +116,23 @@ namespace Runtime{
 
     bool JavaClass::isEnum() {
         return this->accessFlags&&Runtime::ClassEnum ::ACC_ENUM;
+    }
+
+    bool JavaClass::isArray() {
+        return Utils::StringUtils::startsWith(this->getThisClassName(), "[");
+    }
+
+    bool JavaClass::isPrimitiveArray() const {
+        const std::string& n = thisClassName;
+        if (n.size() < 2 || n[0] != '[') {
+            return false;
+        }
+        const char c = n[1];
+        return c == 'Z' || c == 'B' || c == 'S' || c == 'C' || c == 'I' || c == 'J' || c == 'F' || c == 'D';
+    }
+
+    u2 JavaClass::getClassAccessFlags() const {
+        return this->accessFlags;
     }
 
     void JavaClass::initRuntimeConstantsPool(ClassFile::ConstantPoolsList *constantPoolsList) {
@@ -163,13 +216,15 @@ namespace Runtime{
                     u2 classIndex=constantInterfaceMethodRef->getClassIndex();
                     u2 nameAndTypeIndex=constantInterfaceMethodRef->getNameAndTypeIndex();
                     Heap::InterfaceMethodRef *interfaceMethodRef=new Heap::InterfaceMethodRef();
-                    interfaceMethodRef->setName(this->getFieldOrMethodName(classIndex,constantPoolsList));
+                    interfaceMethodRef->setConstantsPool(this->runtimeConstantsPool);
+                    interfaceMethodRef->setClassName(this->getClassName(classIndex,constantPoolsList));
+                    interfaceMethodRef->setName(this->getFieldOrMethodName(nameAndTypeIndex,constantPoolsList));
                     interfaceMethodRef->setDescriptor(this->getDescriptor(nameAndTypeIndex,constantPoolsList));
-
+                    interfaceMethodRef->setMethod(nullptr);
 
                     constantsPoolObject->setInterfaceMethodRef(dynamic_cast<Heap::InterfaceMethodRef*>(interfaceMethodRef));
 
-                    constantsPoolObject->setConstantType("field");
+                    constantsPoolObject->setConstantType("interfaceMethod");
                     break;
                 }
                 case CONSTANT_String: {
@@ -390,9 +445,10 @@ namespace Runtime{
     Object *JavaClass::createNewJavaObjectInstance() {
         Object *object=new Object(this);
         object->setJavaClass(this);
-        std::vector<Slots*> slots(this->instanceCount);
-        if (!slots.empty()) {
-            object->setFields(slots[0]);
+        const u1 n = this->instanceCount;
+        if (n > 0) {
+            Slots* arr = new Slots[static_cast<size_t>(n)]();
+            object->setFields(arr);
         }
         return object;
     }
@@ -413,11 +469,20 @@ namespace Runtime{
             method->setDescriptor(this->getUTF8(index,this->constantPoolsList));
             method->setAccessFlags(clsMethod->getAccessFlags());
             method->setJavaClass(this);
+            method->calcArgsSlotCount(method->getDescriptor());
             ClassFile::Code_attribute *codeAttribute=getCodeAttrs(clsMethod);
             if(codeAttribute!= nullptr){
                 method->setCode(codeAttribute->getCode());
                 method->setMaxStack(codeAttribute->getMaxStack());
                 method->setMaxLocal(codeAttribute->getMaxLocals());
+                method->clearExceptionHandlers();
+                for (Exception_table *et : codeAttribute->getExceptionTableList()) {
+                    if (!et) {
+                        continue;
+                    }
+                    method->addExceptionHandler({et->getStartPc(), et->getEndPc(), et->getHandlerPc(),
+                                               et->getCatchType()});
+                }
             }
 
             this->methodInfosList.push_back(method);
@@ -455,17 +520,56 @@ namespace Runtime{
     }
 
     Object *JavaClass::createArray(int length) {
-        Object* object=new Object(this);
-        std::string className=thisClassName;
-        object->setObjectType(className);
-        std::vector<const Slots*> slots(length);
-        object->setData((void*) slots.data());
-        if (!slots.empty()) {
-            object->setFields((Slots *) slots[0]);
+        if (length < 0) {
+            length = 0;
         }
-        //object->setFields();
-        return object;
+        const size_t primElem = primitiveArrayElemBytes(thisClassName);
+        const bool isRefArray = !thisClassName.empty() && thisClassName[0] == '[' &&
+                                thisClassName.size() >= 2 &&
+                                (thisClassName[1] == 'L' || thisClassName[1] == '[');
+        size_t body = 0;
+        if (primElem > 0) {
+            body = primElem * static_cast<size_t>(length);
+        } else if (isRefArray) {
+            body = sizeof(Object*) * static_cast<size_t>(length);
+        } else {
+            Object* object = new Object(this);
+            object->setObjectType(thisClassName);
+            object->setArrayLength(length);
+            object->setData(nullptr);
+            return object;
+        }
 
+        const size_t payOff = ArrayCoalloc::payloadOffset();
+        const size_t total = payOff + body;
+        auto* raw = static_cast<unsigned char*>(std::malloc(total));
+        if (!raw) {
+            Object* object = new Object(this);
+            object->setObjectType(thisClassName);
+            object->setArrayLength(length);
+            object->setArrayCoallocated(false);
+            if (primElem > 0) {
+                if (length == 0) {
+                    object->setData(nullptr);
+                } else {
+                    const size_t bytes = primElem * static_cast<size_t>(length);
+                    object->setData(new uint8_t[bytes]());
+                }
+            } else if (length == 0) {
+                object->setData(nullptr);
+            } else {
+                object->setData(new Object*[static_cast<size_t>(length)]());
+            }
+            return object;
+        }
+        std::memset(raw, 0, total);
+        *reinterpret_cast<uint64_t*>(raw) = ArrayCoalloc::kMagic;
+        auto* object = new (raw + ArrayCoalloc::objectOffset()) Object(this);
+        object->setObjectType(thisClassName);
+        object->setArrayLength(length);
+        object->setArrayCoallocated(true);
+        object->setData(raw + payOff);
+        return object;
     }
 
     JavaClass::JavaClass(std::string className,ClassLoader* classLoader,bool initStarted) {
@@ -474,6 +578,7 @@ namespace Runtime{
         this->superClass=this->classLoader->loadClass("java/lang/Object");
         this->accessFlags=ClassEnum::ACC_PUBLIC;
         this->initClassStarted=initStarted;
+        this->initClassCompleted=initStarted;
         this->interfaces.push_back(this->classLoader->loadClass("java/io/Serializable"));
         this->interfaces.push_back(this->classLoader->loadClass("java/lang/Cloneable"));
     }
@@ -501,8 +606,16 @@ namespace Runtime{
         return this->initClassStarted;
     }
 
+    bool JavaClass::initCompleted() const {
+        return this->initClassCompleted;
+    }
+
     void JavaClass::startInit() {
         this->initClassStarted=true;
+    }
+
+    void JavaClass::markInitCompleted() {
+        this->initClassCompleted = true;
     }
 
     void JavaClass::initSuperClass(JavaThread *javaThread, JavaClass* javaClass) {
@@ -527,7 +640,9 @@ namespace Runtime{
         this->startInit();
         this->scheduleClinit(javaThread,javaClass);
         this->initSuperClass(javaThread,javaClass);
-
+        if (this->getClinitMethod() == nullptr) {
+            this->markInitCompleted();
+        }
     }
 
     Heap::Method *JavaClass::getClinitMethod() {

@@ -3,6 +3,10 @@
 //
 
 #include "Instructions.h"
+#include "../../runtime/native/NativeMethodRegistry.h"
+#include "../../runtime/heap/JavaClass.h"
+#include <iostream>
+
 namespace Instruction{
     Instructions::Instructions() = default;
 
@@ -61,7 +65,10 @@ namespace Instruction{
     //用于跳转指令
     //offset用于存放跳转偏移量
     void BranchInstruction::fetchOperands(Instruction::ByteCodeReader *byteCodeReader) {
-        this->offset=byteCodeReader->readU2();
+        const u1 hi = byteCodeReader->readU1();
+        const u1 lo = byteCodeReader->readU1();
+        const u2 raw = static_cast<u2>((static_cast<u2>(hi) << 8) | static_cast<u2>(lo));
+        this->offset = static_cast<int16_t>(raw);
     }
 
     int BranchInstruction::getOffset() const {
@@ -80,6 +87,7 @@ namespace Instruction{
     void Index16Instruction::invokeMethod(Runtime::JavaFrame *javaFrame, Runtime::Heap::Method *method) {
         Runtime::JavaThread* javaThread=javaFrame->getJavaThread();
         Runtime::JavaFrame* newFrame=new Runtime::JavaFrame(javaThread,method);
+        newFrame->setInvokeSitePc(javaFrame->getCurrentInsnBegin());
         javaThread->pushJavaFrame(newFrame);
 
         int argsCount=method->argsSlotCount();
@@ -89,9 +97,21 @@ namespace Instruction{
                 newFrame->getLocalVariableTables()->setSlots(i,slots);
             }
         }
-        if(method->isNative()){
-            if(method->getName()=="registerNative"){
+        if (method->isNative()) {
+            Runtime::Native::NativeMethodRegistry& natives = Runtime::Native::NativeMethodRegistry::instance();
+            try {
+                if (natives.tryInvoke(javaFrame, newFrame, method)) {
+                    javaThread->popJavaFrame();
+                } else {
+                    Runtime::JavaClass* jc = method->getJavaClass();
+                    std::cerr << "[X-JVM] Unregistered native method: "
+                              << (jc ? jc->getThisClassName() : std::string("?")) << "."
+                              << method->getName() << " " << method->getDescriptor() << std::endl;
+                    javaThread->popJavaFrame();
+                }
+            } catch (...) {
                 javaThread->popJavaFrame();
+                throw;
             }
         }
     }

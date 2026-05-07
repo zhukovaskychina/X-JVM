@@ -5,6 +5,7 @@
 #ifndef JVM_LOCALVARIABLETABLES_H
 #define JVM_LOCALVARIABLETABLES_H
 
+#include <utility>
 #include <vector>
 #include "../common/Internal.h"
 #include "Slots.h"
@@ -43,6 +44,22 @@ namespace Runtime{
         void setSlots(long index,Slots* slots);
 
         Slots* getSlots(long index);
+
+        template <typename Visitor>
+        void visitObjectRefs(Visitor&& visitor) const {
+            for (Slots* slot : localVars) {
+                if (!slot) {
+                    continue;
+                }
+                if (slot->getSlotType() == "ref") {
+                    Object* r = slot->getRefs();
+                    if (r) {
+                        visitor(r);
+                    }
+                }
+            }
+        }
+
     private:
         std::vector<Slots*> localVars;
 

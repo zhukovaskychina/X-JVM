@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+cd /d "%~dp0\.."
 
 echo ================================
 echo X-JVM Example Runner
@@ -17,9 +18,9 @@ if exist "build\Release\jvm.exe" (
 ) else (
     echo [ERROR] JVM executable not found!
     echo [INFO] Please build the project first using:
-    echo [INFO]   build.bat
+    echo [INFO]   scripts\build.bat
     echo [INFO] or
-    echo [INFO]   .\build.ps1
+    echo [INFO]   .\scripts\build.ps1
     pause
     exit /b 1
 )

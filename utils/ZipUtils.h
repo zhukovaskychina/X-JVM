@@ -6,7 +6,7 @@
 #define JVM_ZIPUTILS_H
 
 #include <zlib.h>
-#include "../libs/unzip/unzip.h"
+#include "../third_party/unzip/unzip.h"
 #include "iostream"
 #include "vector"
 using namespace std;

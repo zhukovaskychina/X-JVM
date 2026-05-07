@@ -3,6 +3,7 @@
 //
 
 #include "ClassMember.h"
+#include "../../classfile/attributeInfo/Exception_table.h"
 #include "../../classfile/attributeInfo/Code_attribute.h"
 #include "HeapAcessFlags.h"
 #include "JavaClass.h"
@@ -113,7 +114,7 @@ namespace Runtime{
             return this->constantsPoolObjectVector[index-1];
         }
 
-        Method::Method() {}
+        Method::Method() : maxStack(0), maxLocal(0), code(nullptr), argsCount(0) {}
 
         Method::~Method() {
 
@@ -142,6 +143,18 @@ namespace Runtime{
 
         void Method::setCode(u1 *code) {
             Method::code = code;
+        }
+
+        const std::vector<ExceptionHandlerEntry> &Method::getExceptionHandlers() const {
+            return exceptionHandlers_;
+        }
+
+        void Method::clearExceptionHandlers() {
+            exceptionHandlers_.clear();
+        }
+
+        void Method::addExceptionHandler(ExceptionHandlerEntry entry) {
+            exceptionHandlers_.push_back(entry);
         }
 
         MemberRef::MemberRef() {}
@@ -227,6 +240,14 @@ namespace Runtime{
                         methodIter->setCode(codeAttribute->getCode());
                         methodIter->setMaxLocal(codeAttribute->getMaxLocals());
                         methodIter->setMaxStack(codeAttribute->getMaxStack());
+                        methodIter->clearExceptionHandlers();
+                        for (Exception_table *et : codeAttribute->getExceptionTableList()) {
+                            if (!et) {
+                                continue;
+                            }
+                            methodIter->addExceptionHandler({et->getStartPc(), et->getEndPc(),
+                                                             et->getHandlerPc(), et->getCatchType()});
+                        }
                       //  methodIter->setArgsSlotCount();
                         break;
                     } else{
@@ -249,27 +270,27 @@ namespace Runtime{
 
 
         bool Method::isSynchronized() {
-            return this->getAccessFlags()&&ClassEnum::ACC_SYNCHRONIZED;
+            return (this->getAccessFlags() & ClassEnum::ACC_SYNCHRONIZED) != 0;
         }
 
         bool Method::isStrict() {
-            return this->getAccessFlags()&&ClassEnum ::ACC_STRICT;
+            return (this->getAccessFlags() & ClassEnum::ACC_STRICT) != 0;
         }
 
         bool Method::isNative() {
-            return this->getAccessFlags()&&ClassEnum ::ACC_NATIVE;
+            return (this->getAccessFlags() & ClassEnum::ACC_NATIVE) != 0;
         }
 
         bool Method::isAbstract() {
-            return this->getAccessFlags()&&ClassEnum ::ACC_ABSTRACT;
+            return (this->getAccessFlags() & ClassEnum::ACC_ABSTRACT) != 0;
         }
 
         bool Method::isBridge() {
-            return this->getAccessFlags()&&ClassEnum ::ACC_BRIDGE;
+            return (this->getAccessFlags() & ClassEnum::ACC_BRIDGE) != 0;
         }
 
         bool Method::isVarargs() {
-            return this->getAccessFlags()&&ClassEnum ::ACC_VARARGS;
+            return (this->getAccessFlags() & ClassEnum::ACC_VARARGS) != 0;
         }
 
         int Method::argsSlotCount() {
@@ -282,23 +303,24 @@ namespace Runtime{
         }
 
         int Method::calcArgsSlotCount(std::string descriptor) {
-            MethodDescriptorParser* methodDescriptorParser;
-            MethodDescriptor* methodDescriptor=methodDescriptorParser->parse(descriptor);
-            std::list<string> parameterList=methodDescriptor->getParameterType();
-            std::list<string>::iterator parameterListIterator;
-
-            for (parameterListIterator=parameterList.begin(); parameterListIterator!=parameterList.end() ; ++parameterListIterator) {
+            this->argsCount = 0;
+            MethodDescriptorParser parser;
+            MethodDescriptor* methodDescriptor = parser.parse(descriptor);
+            if (!methodDescriptor) {
+                return 0;
+            }
+            const std::list<std::string>& parameterList = methodDescriptor->getParameterType();
+            for (const auto& param : parameterList) {
                 this->argsCount++;
-
-                if((*parameterListIterator)=="J"||(*parameterListIterator)=="D"){
+                if (param == "J" || param == "D") {
                     this->argsCount++;
                 }
             }
-            if(!this->isStatic()){
+            if (!this->isStatic()) {
                 this->argsCount++;
             }
+            delete methodDescriptor;
             return this->argsCount;
-
         }
 
         u2 Method::getAccessFlags() const {
@@ -648,27 +670,19 @@ namespace Runtime{
         }
 
         Method *MethodRef::lookupMethodInClass(JavaClass *javaClass, std::string methodName, std::string descriptor) {
-
-
-            std::list<Heap::Method*> methodList=javaClass->getMethodInfosList();
-            std::list<Heap::Method*>::iterator methodIterator;
-            for (methodIterator=methodList.begin(); methodIterator!=methodList.end() ; ++methodIterator) {
-                Heap::Method* methodIter=(*methodIterator);
-
-                if(methodIter->getName()==methodName&&(methodIter->getDescriptor()==descriptor)){
-                    return (*methodIterator);
+            if (!javaClass) {
+                return nullptr;
+            }
+            std::list<Heap::Method*> methodList = javaClass->getMethodInfosList();
+            for (auto methodIterator = methodList.begin(); methodIterator != methodList.end(); ++methodIterator) {
+                Heap::Method* methodIter = (*methodIterator);
+                if (methodIter->getName() == methodName && methodIter->getDescriptor() == descriptor) {
+                    return methodIter;
                 }
             }
-
-            JavaClass* superJavaClass=javaClass->getSuperClass();
-            std::list<Heap::Method*> superMethodList=superJavaClass->getMethodInfosList();
-            std::list<Heap::Method*>::iterator methodSuperIterator;
-            for (methodSuperIterator=superMethodList.begin(); methodSuperIterator!=superMethodList.end() ; ++methodSuperIterator) {
-                Heap::Method* methodIter=(*methodSuperIterator);
-
-                if(methodIter->getName()==methodName&&(methodIter->getDescriptor()==descriptor)){
-                    return (*methodSuperIterator);
-                }
+            JavaClass* superJavaClass = javaClass->getSuperClass();
+            if (superJavaClass) {
+                return lookupMethodInClass(superJavaClass, methodName, descriptor);
             }
             return nullptr;
         }
@@ -703,11 +717,32 @@ namespace Runtime{
         }
 
         void InterfaceMethodRef::resolveInterfaceMethodRef() {
-
+            JavaClass* iface = this->resolvedJavaClass();
+            if (!iface) {
+                return;
+            }
+            this->method = this->lookupInterfaceMethod(iface, this->getName(), this->getDescriptor());
         }
 
         Method *InterfaceMethodRef::lookupInterfaceMethod(JavaClass *javaClass, std::string methodName,
                                                           std::string descriptor) {
+            if (!javaClass) {
+                return nullptr;
+            }
+            std::list<Heap::Method*> methodList = javaClass->getMethodInfosList();
+            for (auto it = methodList.begin(); it != methodList.end(); ++it) {
+                Heap::Method* m = *it;
+                if (m && m->getName() == methodName && m->getDescriptor() == descriptor) {
+                    return m;
+                }
+            }
+            const std::list<JavaClass*> ifaces = javaClass->getInterfaces();
+            for (JavaClass* superIface : ifaces) {
+                Method* found = lookupInterfaceMethod(superIface, methodName, descriptor);
+                if (found) {
+                    return found;
+                }
+            }
             return nullptr;
         }
     }

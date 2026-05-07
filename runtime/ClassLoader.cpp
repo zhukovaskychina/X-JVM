@@ -4,12 +4,12 @@
 
 #include "ClassLoader.h"
 #include "../utils/FileUtils.h"
+#include <stdexcept>
 #include "heap/JavaClass.h"
 #include "heap/ClassMember.h"
 #include "heap/StringConstantPools.h"
 
 namespace Runtime{
-    class Heap::FieldInfo;
 
     ClassPath::ClassPath() {
        // this->parseBootAndExtClassPath("");
@@ -121,7 +121,7 @@ namespace Runtime{
         char *javaHome = nullptr;
         javaHome = getenv("JAVA_HOME");
         if(javaHome==nullptr){
-            exit(0);
+            throw std::runtime_error("ClassPath::getJreHome: JAVA_HOME is not set");
         }
         return javaHome;
     }
@@ -142,9 +142,17 @@ namespace Runtime{
         this->classPath->parseBootAndExtClassPath(jreOptions);
     }
 
+    JavaClass *ClassLoader::getLoadedClass(const std::string &className) {
+        auto it = this->classMap.find(className);
+        if (it == this->classMap.end()) {
+            return nullptr;
+        }
+        return it->second;
+    }
+
     JavaClass *ClassLoader::loadClass(std::string className) {
-        JavaClass *javaClass=this->classMap[className];
-        if(javaClass!= nullptr){
+        JavaClass *javaClass = this->getLoadedClass(className);
+        if (javaClass != nullptr) {
             return javaClass;
         }
         if(Utils::StringUtils::startsWith(className,"[")){
@@ -155,6 +163,9 @@ namespace Runtime{
 
     JavaClass *ClassLoader::loadNonArrayClass(std::string className) {
         Heap::Entry *entry=this->readClass(className);
+        if (entry == nullptr) {
+            return nullptr;
+        }
         cout<<className<<endl;
         JavaClass* javaClass=this->defineClass(entry->getByteQueue());
         this->link(javaClass);

@@ -6,25 +6,25 @@
 
 namespace Instruction{
     static void _iload(Runtime::JavaFrame *javaFrame,u1 index){
-        int value=javaFrame->getLocalVariableTables()->getInt(index-1);
+        int value=javaFrame->getLocalVariableTables()->getInt(static_cast<long>(index));
         javaFrame->getOperandStack()->pushInt(value);
     }
 
     static void _aload(Runtime::JavaFrame *javaFrame,u1 index){
-        Runtime::Object *value=javaFrame->getLocalVariableTables()->getRef(index-1);
+        Runtime::Object *value=javaFrame->getLocalVariableTables()->getRef(static_cast<long>(index));
         javaFrame->getOperandStack()->pushRef(value);
     }
 
     static void _fload(Runtime::JavaFrame *javaFrame,u1 index){
-        float value=javaFrame->getLocalVariableTables()->getFloat(index-1);
+        float value=javaFrame->getLocalVariableTables()->getFloat(static_cast<long>(index));
         javaFrame->getOperandStack()->pushFloat(value);
     }
     static void _dload(Runtime::JavaFrame *javaFrame,u1 index){
-        double value=javaFrame->getLocalVariableTables()->getDouble(index-1);
+        double value=javaFrame->getLocalVariableTables()->getDouble(static_cast<long>(index));
         javaFrame->getOperandStack()->pushDouble(value);
     }
     static void _lload(Runtime::JavaFrame *javaFrame,u1 index){
-        long value=javaFrame->getLocalVariableTables()->getInt(index-1);
+        long value=javaFrame->getLocalVariableTables()->getLong(static_cast<long>(index));
         javaFrame->getOperandStack()->pushLong(value);
     }
 
@@ -43,6 +43,18 @@ namespace Instruction{
     }
     void ILoad3::execute(Runtime::JavaFrame *javaFrame) {
         _iload(javaFrame,3);
+    }
+    void ILoad4::execute(Runtime::JavaFrame* javaFrame) {
+        _iload(javaFrame, 4);
+    }
+    void ILoad5::execute(Runtime::JavaFrame* javaFrame) {
+        _iload(javaFrame, 5);
+    }
+    void ILoad6::execute(Runtime::JavaFrame* javaFrame) {
+        _iload(javaFrame, 6);
+    }
+    void ILoad7::execute(Runtime::JavaFrame* javaFrame) {
+        _iload(javaFrame, 7);
     }
     void ALoad::execute(Runtime::JavaFrame *javaFrame) {
         _aload(javaFrame,this->getIndex());

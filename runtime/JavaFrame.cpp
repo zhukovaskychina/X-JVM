@@ -49,6 +49,8 @@ namespace Runtime{
         this->localVariableTables=new LocalVariableTables(method->getMaxLocal());
         this->nextPc=0;
         this->pc=0;
+        this->currentInsnBegin = 0;
+        this->invokeSitePc = 0;
     }
 
     LocalVariableTables *JavaFrame::getLocalVariableTables() {
@@ -74,5 +76,21 @@ namespace Runtime{
     void JavaFrame::revertNextPc() {
         int pc=this->getJavaThread()->getPcAddress();
         this->nextPc=pc;
+    }
+
+    long JavaFrame::getCurrentInsnBegin() const {
+        return currentInsnBegin;
+    }
+
+    void JavaFrame::setCurrentInsnBegin(long beginPc) {
+        currentInsnBegin = beginPc;
+    }
+
+    long JavaFrame::getInvokeSitePc() const {
+        return invokeSitePc;
+    }
+
+    void JavaFrame::setInvokeSitePc(long sitePc) {
+        invokeSitePc = sitePc;
     }
 }
